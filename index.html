@@ -47,6 +47,16 @@
         cursor: help;
         font-size: 0.75em;
       }
+      /* Custom tooltip styling for mobile tap (handled via JavaScript) */
+      .custom-tooltip {
+        position: absolute;
+        background-color: #333;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        z-index: 1000;
+      }
       button {
         padding: 10px 20px;
         margin-top: 10px;
@@ -118,13 +128,21 @@
         fetch("https://api.coinbase.com/v2/prices/spot?currency=USD")
           .then((response) => response.json())
           .then((data) => {
-            // Coinbase returns the price as a string; we round it to the nearest dollar.
             var price = Math.round(parseFloat(data.data.amount));
             document.getElementById("currentPrice").value = price;
           })
           .catch((error) => {
             console.error("Error fetching Bitcoin price:", error);
           });
+
+        // Prevent negative values in all USD input fields.
+        document.querySelectorAll(".usd-input").forEach(function (input) {
+          input.addEventListener("input", function () {
+            if (this.value < 0) {
+              this.value = 0;
+            }
+          });
+        });
       });
     </script>
   </head>
@@ -157,6 +175,7 @@
           </label>
           <input
             type="number"
+            class="usd-input"
             id="currentPrice"
             placeholder="e.g. 95000"
             step="any"
@@ -214,6 +233,7 @@
           </label>
           <input
             type="number"
+            class="usd-input"
             id="initialAllocation"
             placeholder="e.g. 25000"
             step="any"
@@ -233,6 +253,7 @@
           </label>
           <input
             type="number"
+            class="usd-input"
             id="monthlyPurchase"
             placeholder="e.g. 1000"
             step="any"
@@ -292,6 +313,7 @@
           </label>
           <input
             type="number"
+            class="usd-input"
             id="desiredPension"
             placeholder="e.g. 3000"
             step="any"
@@ -914,6 +936,32 @@
           },
         });
       }
+
+      // Mobile-friendly custom tooltip for tap events on tooltip icons.
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".tooltip-icon").forEach(function (icon) {
+          icon.addEventListener("click", function (event) {
+            event.stopPropagation();
+            // Remove any existing custom tooltip.
+            var existing = document.querySelector(".custom-tooltip");
+            if (existing) existing.remove();
+            // Create a custom tooltip.
+            var tooltip = document.createElement("div");
+            tooltip.className = "custom-tooltip";
+            tooltip.innerText = icon.getAttribute("title");
+            document.body.appendChild(tooltip);
+            var rect = icon.getBoundingClientRect();
+            tooltip.style.top = rect.bottom + window.scrollY + 5 + "px";
+            tooltip.style.left = rect.left + window.scrollX + "px";
+            // Dismiss tooltip when tapping elsewhere.
+            document.addEventListener("click", function handler(e) {
+              tooltip.remove();
+              document.removeEventListener("click", handler);
+            });
+            event.stopPropagation();
+          });
+        });
+      });
     </script>
   </body>
 </html>
