@@ -1,1084 +1,752 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Bitcoin Retirement Calculator</title>
-    <!-- Include Chart.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        line-height: 1.6;
-        background-color: #fafafa;
-        color: #333;
+<head>
+  <meta charset="UTF-8">
+  <title>Bitcoin Retirement Calculator</title>
+  <!-- Include Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+      background-color: #fafafa;
+      color: #333;
+    }
+    /* Flex container for input area and accumulation summary */
+    .input-summary-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    #inputArea {
+      flex: 1;
+      min-width: 300px;
+    }
+    #summary {
+      flex: 1;
+      min-width: 300px;
+    }
+    select, input, button.update-button {
+      margin-bottom: 10px;
+      padding: 5px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button.update-button {
+      width: auto;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+    }
+    label {
+      display: inline-block;
+      width: 350px;
+      vertical-align: top;
+      margin-bottom: 5px;
+    }
+    /* Tooltip button styling as actual buttons */
+    .tooltip-button {
+      margin-left: 5px;
+      color: darkorange;
+      cursor: pointer;
+      font-size: 1em;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .tooltip-button:focus {
+      outline: none;
+    }
+    /* Custom tooltip styling for mobile tap with limited width */
+    .custom-tooltip {
+      position: absolute;
+      background-color: #333;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      z-index: 1000;
+      max-width: 150px;
+      word-wrap: break-word;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      background-color: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .summary-table {
+      max-width: 500px;
+      margin-top: 20px;
+    }
+    .summary-table td {
+      text-align: left;
+      padding: 6px;
+    }
+    .hint {
+      font-size: 0.9em;
+      color: #555;
+    }
+    /* Currency label spans */
+    .currency-label {
+      font-weight: bold;
+    }
+    #retirementSummary {
+      margin-top: 40px;
+    }
+    .warning {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    /* Chart container styling */
+    #chartContainer {
+      margin-top: 20px;
+    }
+    /* Set a reduced chart height */
+    #retirementChart {
+      height: 200px !important;
+    }
+    /* Explanatory text styling */
+    #explanation {
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #e9f5ff;
+      border: 1px solid #b3d7ff;
+      border-radius: 4px;
+    }
+  </style>
+  <script>
+    // Global variable to hold the selected currency.
+    var currentCurrency = "USD";
+    
+    // Returns a locale string based on the selected currency.
+    function getLocaleForCurrency(currency) {
+      if (currency === "USD") {
+        return "en-US";
+      } else if (currency === "EUR") {
+        return "de-DE";
+      } else if (currency === "PLN") {
+        return "pl-PL";
+      } else {
+        return "en-US";
       }
-      /* Flex container for input area and accumulation summary */
-      .input-summary-container {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-      }
-      #inputArea {
-        flex: 1;
-        min-width: 300px;
-      }
-      #summary {
-        flex: 1;
-        min-width: 300px;
-      }
-      select,
-      input,
-      button.update-button {
-        margin-bottom: 10px;
-        padding: 5px;
-        width: 250px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      button.update-button {
-        width: auto;
-        cursor: pointer;
-        background-color: #4caf50;
-        color: white;
-      }
-      label {
-        display: inline-block;
-        width: 350px;
-        vertical-align: top;
-        margin-bottom: 5px;
-      }
-      /* Tooltip button styling as actual buttons */
-      .tooltip-button {
-        margin-left: 5px;
-        color: darkorange;
-        cursor: pointer;
-        font-size: 1em;
-        background: none;
-        border: none;
-        padding: 0;
-      }
-      .tooltip-button:focus {
-        outline: none;
-      }
-      /* Custom tooltip styling for mobile tap with limited width */
-      .custom-tooltip {
-        position: absolute;
-        background-color: #333;
-        color: #fff;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.8em;
-        z-index: 1000;
-        max-width: 150px;
-        word-wrap: break-word;
-      }
-      button {
-        padding: 10px 20px;
-        margin-top: 10px;
-        border: none;
-        border-radius: 4px;
-        background-color: #4caf50;
-        color: white;
-        cursor: pointer;
-      }
-      button:hover {
-        background-color: #45a049;
-      }
-      table {
-        border-collapse: collapse;
-        margin-top: 20px;
-        width: 100%;
-        background-color: #fff;
-      }
-      th,
-      td {
-        border: 1px solid #ccc;
-        padding: 8px 10px;
-        text-align: center;
-      }
-      th {
-        background-color: #f0f0f0;
-      }
-      .summary-table {
-        max-width: 500px;
-        margin-top: 20px;
-      }
-      .summary-table td {
-        text-align: left;
-        padding: 6px;
-      }
-      .hint {
-        font-size: 0.9em;
-        color: #555;
-      }
-      /* Currency label spans */
-      .currency-label {
-        font-weight: bold;
-      }
-      #retirementSummary {
-        margin-top: 40px;
-      }
-      .warning {
-        color: red;
-        font-weight: bold;
-        margin-bottom: 10px;
-      }
-      /* Chart container styling */
-      #chartContainer {
-        margin-top: 20px;
-      }
-      /* Set a reduced chart height */
-      #retirementChart {
-        height: 200px !important;
-      }
-      /* Explanatory text styling */
-      #explanation {
-        margin-bottom: 20px;
-        padding: 10px;
-        background-color: #e9f5ff;
-        border: 1px solid #b3d7ff;
-        border-radius: 4px;
-      }
-    </style>
-    <script>
-      // Global variable to hold the selected currency.
-      var currentCurrency = "USD";
-
-      // Returns a locale string based on the selected currency.
-      function getLocaleForCurrency(currency) {
-        if (currency === "USD") {
-          return "en-US";
-        } else if (currency === "EUR") {
-          return "de-DE";
-        } else if (currency === "PLN") {
-          return "pl-PL";
-        } else {
-          return "en-US";
-        }
-      }
-
-      // Helper function to format currency values rounded to the nearest full unit.
-      function formatCurrency(num) {
-        var locale = getLocaleForCurrency(currentCurrency);
-        return (
-          parseFloat(num).toLocaleString(locale, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }) +
-          " " +
-          currentCurrency
-        );
-      }
-
-      // Update all currency label spans.
-      function updateCurrencyLabels() {
-        document.querySelectorAll(".currency-label").forEach(function (span) {
-          span.innerText = currentCurrency;
-        });
-      }
-
-      // Fetch the current Bitcoin price. If the returned currency doesn't match, convert using ratios.
-      function updatePrice() {
-        fetch(
-          "https://api.coinbase.com/v2/prices/spot?currency=" + currentCurrency
-        )
-          .then((response) => {
-            if (!response.ok) throw new Error("Network error");
-            return response.json();
-          })
-          .then((data) => {
-            var returnedCurrency = data.data.currency;
-            var usdPrice = Math.round(parseFloat(data.data.amount));
-            var finalPrice = usdPrice;
-            // If the returned currency doesn't match the selected currency, use conversion ratios.
-            if (returnedCurrency !== currentCurrency) {
+    }
+    
+    // Helper function to format currency values rounded to the nearest full unit.
+    function formatCurrency(num) {
+      var locale = getLocaleForCurrency(currentCurrency);
+      return parseFloat(num).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " " + currentCurrency;
+    }
+    
+    // Update all currency label spans.
+    function updateCurrencyLabels() {
+      document.querySelectorAll('.currency-label').forEach(function(span) {
+        span.innerText = currentCurrency;
+      });
+    }
+    
+    // Fetch the current Bitcoin price using the selected currency.
+    // If the API response doesn't match the selected currency, convert using approximate ratios.
+    function updatePrice() {
+      fetch("https://api.coinbase.com/v2/prices/spot?currency=" + currentCurrency)
+        .then(response => {
+          if (!response.ok) throw new Error("Network error");
+          return response.json();
+        })
+        .then(data => {
+          var returnedCurrency = data.data.currency;
+          var usdPrice = Math.round(parseFloat(data.data.amount));
+          var finalPrice = usdPrice;
+          if (returnedCurrency !== currentCurrency) {
+            if (currentCurrency === "EUR") {
+              finalPrice = Math.round(usdPrice * 0.96);
+            } else if (currentCurrency === "PLN") {
+              finalPrice = Math.round(usdPrice * 4);
+            }
+          }
+          document.getElementById("currentPrice").value = finalPrice;
+        })
+        .catch(error => {
+          console.error("Error fetching price for " + currentCurrency + ":", error);
+          // Fallback: fetch USD price and convert.
+          fetch("https://api.coinbase.com/v2/prices/spot?currency=USD")
+            .then(response => response.json())
+            .then(data => {
+              var usdPrice = Math.round(parseFloat(data.data.amount));
+              var finalPrice;
               if (currentCurrency === "EUR") {
                 finalPrice = Math.round(usdPrice * 0.96);
               } else if (currentCurrency === "PLN") {
                 finalPrice = Math.round(usdPrice * 4);
+              } else {
+                finalPrice = usdPrice;
               }
-            }
-            document.getElementById("currentPrice").value = finalPrice;
-          })
-          .catch((error) => {
-            console.error(
-              "Error fetching price for " + currentCurrency + ":",
-              error
-            );
-            // Fallback: fetch USD price and convert using ratios.
-            fetch("https://api.coinbase.com/v2/prices/spot?currency=USD")
-              .then((response) => response.json())
-              .then((data) => {
-                var usdPrice = Math.round(parseFloat(data.data.amount));
-                var finalPrice;
-                if (currentCurrency === "EUR") {
-                  finalPrice = Math.round(usdPrice * 0.96);
-                } else if (currentCurrency === "PLN") {
-                  finalPrice = Math.round(usdPrice * 4);
-                } else {
-                  finalPrice = usdPrice;
-                }
-                document.getElementById("currentPrice").value = finalPrice;
-              })
-              .catch((err) => {
-                console.error("Error fetching fallback USD price:", err);
-                alert("Unable to fetch Bitcoin price.");
-              });
-          });
-      }
-
-      document.addEventListener("DOMContentLoaded", function () {
-        // Set initial currency.
-        var currencySelect = document.getElementById("currencySelect");
-        currentCurrency = currencySelect.value;
-        updateCurrencyLabels();
-        updatePrice();
-
-        // Prevent negative values for USD inputs.
-        document.querySelectorAll(".usd-input").forEach(function (input) {
-          input.addEventListener("input", function () {
-            if (this.value < 0) {
-              this.value = 0;
-            }
-          });
-        });
-
-        // When currency is changed, update global variable and labels.
-        currencySelect.addEventListener("change", function () {
-          currentCurrency = this.value;
-          updateCurrencyLabels();
-        });
-
-        // "Update Price" button forces refetch of Bitcoin price.
-        document
-          .getElementById("updatePriceButton")
-          .addEventListener("click", function () {
-            updatePrice();
-          });
-
-        // Mobile-friendly custom tooltip.
-        document.querySelectorAll(".tooltip-button").forEach(function (button) {
-          button.addEventListener("click", function (event) {
-            event.stopPropagation();
-            var existing = document.querySelector(".custom-tooltip");
-            if (existing) existing.remove();
-            var tooltip = document.createElement("div");
-            tooltip.className = "custom-tooltip";
-            tooltip.innerText = button.getAttribute("title");
-            document.body.appendChild(tooltip);
-            var rect = button.getBoundingClientRect();
-            tooltip.style.top = rect.bottom + window.scrollY + 5 + "px";
-            tooltip.style.left = rect.left + window.scrollX + "px";
-            document.addEventListener("click", function handler(e) {
-              tooltip.remove();
-              document.removeEventListener("click", handler);
+              document.getElementById("currentPrice").value = finalPrice;
+            })
+            .catch(err => {
+              console.error("Error fetching fallback USD price:", err);
+              alert("Unable to fetch Bitcoin price.");
             });
-            event.stopPropagation();
-          });
+        });
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+      // Set initial currency.
+      var currencySelect = document.getElementById("currencySelect");
+      currentCurrency = currencySelect.value;
+      updateCurrencyLabels();
+      updatePrice();
+      
+      // Prevent negative values in USD input fields.
+      document.querySelectorAll('.usd-input').forEach(function(input) {
+        input.addEventListener('input', function() {
+          if (this.value < 0) {
+            this.value = 0;
+          }
         });
       });
-    </script>
-  </head>
-  <body>
-    <h1>Bitcoin Retirement Calculator</h1>
-    <div id="explanation">
-      This app helps you project the growth of your Bitcoin investment during an
-      accumulation phase and then simulates your retirement portfolio – taking
-      into account monthly investments and subsequent withdrawals. For example,
-      if you start with a <span class="currency-label">USD</span>25,000 lump sum
-      and invest <span class="currency-label">USD</span>1,000 per month at an
-      expected 40% CAGR (with a 5% annual reduction in growth), the app
-      calculates your final portfolio value and then projects how long it can
-      support your desired monthly pension during retirement. Adjust the
-      parameters to see how different scenarios affect your retirement planning.
-    </div>
-
-    <!-- Currency Selection -->
-    <div>
-      <label for="currencySelect">Select Currency:</label>
-      <select id="currencySelect">
-        <option value="USD" selected>USD</option>
-        <option value="EUR">EUR</option>
-        <option value="PLN">PLN</option>
-      </select>
-      <button type="button" id="updatePriceButton" class="update-button">
-        Update Price
-      </button>
-    </div>
-
-    <!-- Container for User Inputs and Accumulation Summary -->
-    <div class="input-summary-container">
-      <!-- User Input Area -->
-      <div id="inputArea">
-        <!-- Accumulation Phase Inputs -->
-        <div>
-          <label for="currentPrice">
-            Current Bitcoin Price (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="This price is automatically fetched from Coinbase's free spot price API (https://api.coinbase.com/v2/prices/spot?currency=XXX) and rounded to the nearest dollar. Replace XXX with the selected currency."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="currentPrice"
-            placeholder="e.g. 95000"
-            step="any"
-            min="1"
-            max="1000000"
-          />
-        </div>
-        <div>
-          <label for="expectedCAGR">
-            Expected Future CAGR (%)
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter your expected annual CAGR for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
-            >
-              ?
-            </button>
-            <span class="hint">(historical: 5-year: 56%, 10-year: 82%)</span>
-          </label>
-          <input
-            type="number"
-            id="expectedCAGR"
-            placeholder="e.g. 40"
-            step="any"
-            value="40"
-            min="-100"
-            max="200"
-          />
-        </div>
-        <div>
-          <label for="yearlyCAGRChange">
-            Yearly CAGR Change (relative %) (e.g. 5 means reduce by 5%):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38%."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="yearlyCAGRChange"
-            placeholder="e.g. 5"
-            step="any"
-            value="5"
-            min="0"
-            max="100"
-          />
-        </div>
-        <div>
-          <label for="initialAllocation">
-            Initial Allocation (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the lump sum amount in the selected currency used to purchase Bitcoin at the current price."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="initialAllocation"
-            placeholder="e.g. 25000"
-            step="any"
-            value="25000"
-            min="0"
-            max="1000000000"
-          />
-        </div>
-        <div>
-          <label for="monthlyPurchase">
-            Monthly Purchase (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the amount in the selected currency you plan to invest each month to purchase Bitcoin."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="monthlyPurchase"
-            placeholder="e.g. 1000"
-            step="any"
-            value="1000"
-            min="0"
-            max="1000000"
-          />
-        </div>
-        <div>
-          <label for="monthlyPurchaseChange">
-            Yearly Change in Monthly Purchase (%):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0 means no change."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="monthlyPurchaseChange"
-            placeholder="e.g. 0"
-            step="any"
-            value="0"
-            min="-100"
-            max="100"
-          />
-        </div>
-        <div>
-          <label for="years">
-            Number of Years to Invest:
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the total number of years over which you plan to invest in Bitcoin."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="years"
-            placeholder="e.g. 5"
-            step="1"
-            value="5"
-            min="1"
-            max="100"
-          />
-        </div>
-
-        <!-- Retirement Phase Inputs -->
-        <div>
-          <label for="desiredPension">
-            Desired Monthly Pension (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the desired monthly pension you want during retirement in the selected currency."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="desiredPension"
-            placeholder="e.g. 3000"
-            step="any"
-            value="3000"
-            min="0"
-            max="100000"
-          />
-        </div>
-        <div>
-          <label for="pensionChange">
-            Yearly Change in Monthly Pension During Retirement (%):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the yearly percentage change for your monthly pension during retirement."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="pensionChange"
-            placeholder="e.g. 2"
-            step="any"
-            value="2"
-            min="-100"
-            max="100"
-          />
-        </div>
-        <div>
-          <label for="retirementYears">
-            Number of Retirement Years:
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Enter the total number of years for your retirement projection."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="retirementYears"
-            placeholder="e.g. 15"
-            step="1"
-            value="15"
-            min="1"
-            max="100"
-          />
-        </div>
-        <button onclick="calculate()">Calculate</button>
+      
+      // When currency is changed, update the global variable and labels.
+      currencySelect.addEventListener("change", function() {
+        currentCurrency = this.value;
+        updateCurrencyLabels();
+      });
+      
+      // "Update Price" button forces refetch of Bitcoin price.
+      document.getElementById("updatePriceButton").addEventListener("click", function() {
+        updatePrice();
+      });
+      
+      // Mobile-friendly custom tooltip.
+      document.querySelectorAll('.tooltip-button').forEach(function(button) {
+          button.addEventListener('click', function(event) {
+              event.stopPropagation();
+              var existing = document.querySelector('.custom-tooltip');
+              if(existing) existing.remove();
+              var tooltip = document.createElement('div');
+              tooltip.className = 'custom-tooltip';
+              tooltip.innerText = button.getAttribute('title');
+              document.body.appendChild(tooltip);
+              var rect = button.getBoundingClientRect();
+              tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+              tooltip.style.left = (rect.left + window.scrollX) + 'px';
+              document.addEventListener('click', function handler(e) {
+                  tooltip.remove();
+                  document.removeEventListener('click', handler);
+              });
+              event.stopPropagation();
+          });
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Bitcoin Retirement Calculator</h1>
+  <div id="explanation">
+    This app helps you project the growth of your Bitcoin investment during an accumulation phase and then simulates your retirement portfolio – taking into account monthly investments and subsequent withdrawals. For example, if you start with a <span class="currency-label">USD</span>25,000 lump sum and invest <span class="currency-label">USD</span>1,000 per month at an expected 40% CAGR (with a 5% annual reduction in growth), the app calculates your final portfolio value and then projects how long it can support your desired monthly pension during retirement. Adjust the parameters to see how different scenarios affect your retirement planning.
+  </div>
+  
+  <!-- Currency Selection -->
+  <div>
+    <label for="currencySelect">Select Currency:</label>
+    <select id="currencySelect">
+      <option value="USD" selected>USD</option>
+      <option value="EUR">EUR</option>
+      <option value="PLN">PLN</option>
+    </select>
+    <button type="button" id="updatePriceButton" class="update-button">Update Price</button>
+  </div>
+  
+  <!-- Container for User Inputs and Accumulation Summary -->
+  <div class="input-summary-container">
+    <!-- User Input Area -->
+    <div id="inputArea">
+      <!-- Accumulation Phase Inputs -->
+      <div>
+        <label for="currentPrice">
+          Current Bitcoin Price (<span class="currency-label">USD</span>) (Mkcap):
+          <button type="button" class="tooltip-button" title="This price is automatically fetched from Coinbase's free spot price API (https://api.coinbase.com/v2/prices/spot?currency=XXX) and rounded to the nearest dollar. Replace XXX with the selected currency.">?</button>
+        </label>
+        <input type="number" class="usd-input" id="currentPrice" placeholder="e.g. 95000" step="any" min="1" max="1000000">
       </div>
-
-      <!-- Accumulation Summary -->
-      <div id="summary"></div>
+      <div>
+        <label for="expectedCAGR">
+          Expected Future CAGR (%)
+          <button type="button" class="tooltip-button" title="Enter your expected annual CAGR for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%.">?</button>
+          <span class="hint">(historical: 5-year: 56%, 10-year: 82%)</span>
+        </label>
+        <input type="number" id="expectedCAGR" placeholder="e.g. 40" step="any" value="40" min="-100" max="200">
+      </div>
+      <div>
+        <label for="yearlyCAGRChange">
+          Yearly CAGR Change (relative %) (e.g. 5 means reduce by 5%):
+          <button type="button" class="tooltip-button" title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38%.">?</button>
+        </label>
+        <input type="number" id="yearlyCAGRChange" placeholder="e.g. 5" step="any" value="5" min="0" max="100">
+      </div>
+      <div>
+        <label for="initialAllocation">
+          Initial Allocation (<span class="currency-label">USD</span>):
+          <button type="button" class="tooltip-button" title="Enter the lump sum amount in the selected currency used to purchase Bitcoin at the current price.">?</button>
+        </label>
+        <input type="number" class="usd-input" id="initialAllocation" placeholder="e.g. 25000" step="any" value="25000" min="0" max="1000000000">
+      </div>
+      <div>
+        <label for="monthlyPurchase">
+          Monthly Purchase (<span class="currency-label">USD</span>):
+          <button type="button" class="tooltip-button" title="Enter the amount in the selected currency you plan to invest each month to purchase Bitcoin.">?</button>
+        </label>
+        <input type="number" class="usd-input" id="monthlyPurchase" placeholder="e.g. 1000" step="any" value="1000" min="0" max="1000000">
+      </div>
+      <div>
+        <label for="monthlyPurchaseChange">
+          Yearly Change in Monthly Purchase (%):
+          <button type="button" class="tooltip-button" title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0 means no change.">?</button>
+        </label>
+        <input type="number" id="monthlyPurchaseChange" placeholder="e.g. 0" step="any" value="0" min="-100" max="100">
+      </div>
+      <div>
+        <label for="years">
+          Number of Years to Invest:
+          <button type="button" class="tooltip-button" title="Enter the total number of years over which you plan to invest in Bitcoin.">?</button>
+        </label>
+        <input type="number" id="years" placeholder="e.g. 5" step="1" value="5" min="1" max="100">
+      </div>
+      
+      <!-- Retirement Phase Inputs -->
+      <div>
+        <label for="desiredPension">
+          Desired Monthly Pension (<span class="currency-label">USD</span>):
+          <button type="button" class="tooltip-button" title="Enter the desired monthly pension you want during retirement in the selected currency.">?</button>
+        </label>
+        <input type="number" class="usd-input" id="desiredPension" placeholder="e.g. 3000" step="any" value="3000" min="0" max="100000">
+      </div>
+      <div>
+        <label for="pensionChange">
+          Yearly Change in Monthly Pension During Retirement (%):
+          <button type="button" class="tooltip-button" title="Enter the yearly percentage change for your monthly pension during retirement.">?</button>
+        </label>
+        <input type="number" id="pensionChange" placeholder="e.g. 2" step="any" value="2" min="-100" max="100">
+      </div>
+      <div>
+        <label for="retirementYears">
+          Number of Retirement Years:
+          <button type="button" class="tooltip-button" title="Enter the total number of years for your retirement projection.">?</button>
+        </label>
+        <input type="number" id="retirementYears" placeholder="e.g. 15" step="1" value="15" min="1" max="100">
+      </div>
+      <button onclick="calculate()">Calculate</button>
     </div>
+    
+    <!-- Accumulation Summary -->
+    <div id="summary"></div>
+  </div>
+  
+  <!-- Yearly Investment Breakdown Table -->
+  <div id="result">
+    <h2>Yearly Investment Breakdown</h2>
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th title="Investment Year: Year 0 represents the initial lump sum purchase; subsequent years are for monthly investments.">Year</th>
+          <th title="Bitcoin price at the start of the year.">Current Bitcoin Price (<span class="currency-label">USD</span>) (Mkcap)</th>
+          <th title="Amount of Bitcoin purchased during the period (invested amount divided by average price).">Bitcoin Purchased (BTC)</th>
+          <th title="Value of the Bitcoin purchased at the end of the year.">Value (<span class="currency-label">USD</span>)</th>
+          <th title="Effective annual CAGR for that year after applying the relative reduction.">Current CAGR (%)</th>
+          <th title="Monthly investment amount for that year.">Monthly Purchase (<span class="currency-label">USD</span>)</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody">
+        <!-- Rows will be generated here -->
+      </tbody>
+    </table>
+  </div>
 
-    <!-- Yearly Investment Breakdown Table -->
-    <div id="result">
-      <h2>Yearly Investment Breakdown</h2>
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th
-              title="Investment Year: Year 0 represents the initial lump sum purchase; subsequent years are for monthly investments."
-            >
-              Year
-            </th>
-            <th title="Bitcoin price at the start of the year.">
-              Current Bitcoin Price (<span class="currency-label">USD</span>)
-            </th>
-            <th
-              title="Amount of Bitcoin purchased during the period (invested amount divided by average price)."
-            >
-              Bitcoin Purchased (BTC)
-            </th>
-            <th title="Value of the Bitcoin purchased at the end of the year.">
-              Value (<span class="currency-label">USD</span>)
-            </th>
-            <th
-              title="Effective annual CAGR for that year after applying the relative reduction."
-            >
-              Current CAGR (%)
-            </th>
-            <th title="Monthly investment amount for that year.">
-              Monthly Purchase (<span class="currency-label">USD</span>)
-            </th>
-          </tr>
-        </thead>
-        <tbody id="resultBody">
-          <!-- Rows will be generated here -->
-        </tbody>
-      </table>
-    </div>
+  <!-- Retirement Projection Table and Chart -->
+  <div id="retirementSummary">
+    <!-- Retirement projection table and chart will be generated here -->
+  </div>
 
-    <!-- Retirement Projection Table and Chart -->
-    <div id="retirementSummary">
-      <!-- Retirement projection table and chart will be generated here -->
-    </div>
+  <script>
+    // Use formatCurrency() in place of the old format function.
+    function formatCurrency(num) {
+      var locale = getLocaleForCurrency(currentCurrency);
+      return parseFloat(num).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " " + currentCurrency;
+    }
+    
+    function calculate() {
+      document.getElementById("resultBody").innerHTML = "";
+      document.getElementById("summary").innerHTML = "";
+      document.getElementById("retirementSummary").innerHTML = "";
+      
+      var retirementDiv = document.getElementById("retirementSummary");
+      var chartDiv = document.createElement("div");
+      chartDiv.id = "chartContainer";
+      chartDiv.style.marginTop = "20px";
+      var canvas = document.createElement("canvas");
+      canvas.id = "retirementChart";
+      canvas.style.height = "200px";
+      chartDiv.appendChild(canvas);
+      retirementDiv.appendChild(chartDiv);
 
-    <script>
-      // Replace formatUSD with formatCurrency.
-      function formatCurrency(num) {
-        var locale = getLocaleForCurrency(currentCurrency);
-        return (
-          parseFloat(num).toLocaleString(locale, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }) +
-          " " +
-          currentCurrency
-        );
+      var currentPriceInput = parseFloat(document.getElementById("currentPrice").value);
+      var expectedCAGR = parseFloat(document.getElementById("expectedCAGR").value);
+      var yearlyCAGRChange = parseFloat(document.getElementById("yearlyCAGRChange").value);
+      var initialAllocation = parseFloat(document.getElementById("initialAllocation").value);
+      var monthlyPurchase = parseFloat(document.getElementById("monthlyPurchase").value);
+      var monthlyPurchaseChange = parseFloat(document.getElementById("monthlyPurchaseChange").value);
+      var years = parseInt(document.getElementById("years").value, 10);
+
+      if (isNaN(currentPriceInput) || isNaN(expectedCAGR) || isNaN(yearlyCAGRChange) ||
+          isNaN(initialAllocation) || isNaN(monthlyPurchase) ||
+          isNaN(monthlyPurchaseChange) || isNaN(years)) {
+        alert("Please fill in all accumulation fields with valid numbers.");
+        return;
       }
 
-      function calculate() {
-        document.getElementById("resultBody").innerHTML = "";
-        document.getElementById("summary").innerHTML = "";
-        document.getElementById("retirementSummary").innerHTML = "";
+      var price = currentPriceInput;
+      var currentCAGR = expectedCAGR;
+      var currentMonthlyPurchase = monthlyPurchase;
+      var totalBTC = 0;
+      var totalInvested = 0;
 
-        var retirementDiv = document.getElementById("retirementSummary");
-        var chartDiv = document.createElement("div");
-        chartDiv.id = "chartContainer";
-        chartDiv.style.marginTop = "20px";
-        var canvas = document.createElement("canvas");
-        canvas.id = "retirementChart";
-        canvas.style.height = "200px";
-        chartDiv.appendChild(canvas);
-        retirementDiv.appendChild(chartDiv);
+      var btcPurchased = initialAllocation / price;
+      var value = btcPurchased * price;
+      totalBTC += btcPurchased;
+      totalInvested += initialAllocation;
+      addRow(0, price, btcPurchased, value, "-", "-", "Year 0 uses your initial allocation to purchase Bitcoin at the current price.");
 
-        var currentPriceInput = parseFloat(
-          document.getElementById("currentPrice").value
-        );
-        var expectedCAGR = parseFloat(
-          document.getElementById("expectedCAGR").value
-        );
-        var yearlyCAGRChange = parseFloat(
-          document.getElementById("yearlyCAGRChange").value
-        );
-        var initialAllocation = parseFloat(
-          document.getElementById("initialAllocation").value
-        );
-        var monthlyPurchase = parseFloat(
-          document.getElementById("monthlyPurchase").value
-        );
-        var monthlyPurchaseChange = parseFloat(
-          document.getElementById("monthlyPurchaseChange").value
-        );
-        var years = parseInt(document.getElementById("years").value, 10);
+      for (var i = 1; i <= years; i++) {
+        var startingPrice = price;
+        var endPrice = startingPrice * (1 + currentCAGR / 100);
+        var avgPrice = (startingPrice + endPrice) / 2;
+        var totalInvestmentYear = currentMonthlyPurchase * 12;
+        var btcPurchasedYear = totalInvestmentYear / avgPrice;
+        var valueYear = btcPurchasedYear * endPrice;
 
-        if (
-          isNaN(currentPriceInput) ||
-          isNaN(expectedCAGR) ||
-          isNaN(yearlyCAGRChange) ||
-          isNaN(initialAllocation) ||
-          isNaN(monthlyPurchase) ||
-          isNaN(monthlyPurchaseChange) ||
-          isNaN(years)
-        ) {
-          alert("Please fill in all accumulation fields with valid numbers.");
-          return;
-        }
+        totalBTC += btcPurchasedYear;
+        totalInvested += totalInvestmentYear;
 
-        var price = currentPriceInput;
-        var currentCAGR = expectedCAGR;
-        var currentMonthlyPurchase = monthlyPurchase;
-        var totalBTC = 0;
-        var totalInvested = 0;
+        addRow(i, startingPrice, btcPurchasedYear, valueYear, currentCAGR.toFixed(2), currentMonthlyPurchase, "For Year " + i + ", monthly investments purchase Bitcoin using an average price over the year.");
 
-        var btcPurchased = initialAllocation / price;
-        var value = btcPurchased * price;
-        totalBTC += btcPurchased;
-        totalInvested += initialAllocation;
-        addRow(
-          0,
-          price,
-          btcPurchased,
-          value,
-          "-",
-          "-",
-          "Year 0 uses your initial allocation to purchase Bitcoin at the current price."
-        );
-
-        for (var i = 1; i <= years; i++) {
-          var startingPrice = price;
-          var endPrice = startingPrice * (1 + currentCAGR / 100);
-          var avgPrice = (startingPrice + endPrice) / 2;
-          var totalInvestmentYear = currentMonthlyPurchase * 12;
-          var btcPurchasedYear = totalInvestmentYear / avgPrice;
-          var valueYear = btcPurchasedYear * endPrice;
-
-          totalBTC += btcPurchasedYear;
-          totalInvested += totalInvestmentYear;
-
-          addRow(
-            i,
-            startingPrice,
-            btcPurchasedYear,
-            valueYear,
-            currentCAGR.toFixed(2),
-            currentMonthlyPurchase,
-            "For Year " +
-              i +
-              ", monthly investments purchase Bitcoin using an average price over the year."
-          );
-
-          price = endPrice;
-          currentCAGR = currentCAGR * (1 - yearlyCAGRChange / 100);
-          currentMonthlyPurchase =
-            currentMonthlyPurchase * (1 + monthlyPurchaseChange / 100);
-        }
-
-        var finalPrice = price;
-        var finalInvestmentValue = totalBTC * finalPrice;
-        var netGain = finalInvestmentValue - totalInvested;
-        var percentageGain = (netGain / totalInvested) * 100;
-
-        createSummaryTable(
-          totalInvested,
-          totalBTC,
-          finalPrice,
-          finalInvestmentValue,
-          netGain,
-          percentageGain
-        );
-
-        var desiredPension = parseFloat(
-          document.getElementById("desiredPension").value
-        );
-        var pensionChange = parseFloat(
-          document.getElementById("pensionChange").value
-        );
-        var retirementYears = parseInt(
-          document.getElementById("retirementYears").value,
-          10
-        );
-        if (
-          isNaN(desiredPension) ||
-          isNaN(pensionChange) ||
-          isNaN(retirementYears)
-        ) {
-          alert("Please fill in all retirement fields with valid numbers.");
-          return;
-        }
-
-        var retirementResults = simulateRetirement(
-          finalInvestmentValue,
-          desiredPension,
-          pensionChange,
-          currentCAGR,
-          yearlyCAGRChange,
-          retirementYears,
-          finalPrice
-        );
-        createRetirementTable(retirementResults);
-        createRetirementChart(retirementResults);
+        price = endPrice;
+        currentCAGR = currentCAGR * (1 - yearlyCAGRChange / 100);
+        currentMonthlyPurchase = currentMonthlyPurchase * (1 + monthlyPurchaseChange / 100);
       }
 
-      function addRow(
-        year,
-        currentPrice,
-        btcPurchased,
-        value,
-        cagr,
-        monthlyPurchase,
-        tooltipText
-      ) {
-        var tbody = document.getElementById("resultBody");
+      var finalPrice = price;
+      var finalInvestmentValue = totalBTC * finalPrice;
+      var netGain = finalInvestmentValue - totalInvested;
+      var percentageGain = (netGain / totalInvested) * 100;
+
+      createSummaryTable(totalInvested, totalBTC, finalPrice, finalInvestmentValue, netGain, percentageGain);
+
+      var desiredPension = parseFloat(document.getElementById("desiredPension").value);
+      var pensionChange = parseFloat(document.getElementById("pensionChange").value);
+      var retirementYears = parseInt(document.getElementById("retirementYears").value, 10);
+      if (isNaN(desiredPension) || isNaN(pensionChange) || isNaN(retirementYears)) {
+        alert("Please fill in all retirement fields with valid numbers.");
+        return;
+      }
+      
+      var retirementResults = simulateRetirement(finalInvestmentValue, desiredPension, pensionChange, currentCAGR, yearlyCAGRChange, retirementYears, finalPrice);
+      createRetirementTable(retirementResults);
+      createRetirementChart(retirementResults);
+    }
+
+    function addRow(year, currentPrice, btcPurchased, value, cagr, monthlyPurchase, tooltipText) {
+      var tbody = document.getElementById("resultBody");
+      var row = document.createElement("tr");
+
+      var yearCell = document.createElement("td");
+      yearCell.textContent = year;
+      yearCell.title = "Investment Year: " + (year === 0 ? "Initial allocation" : "Year " + year);
+      row.appendChild(yearCell);
+
+      // Compute market cap in USD based on the current price converted to USD.
+      var priceInUSD = currentPrice;
+      if (currentCurrency === "EUR") {
+        priceInUSD = currentPrice / 0.96;
+      } else if (currentCurrency === "PLN") {
+        priceInUSD = currentPrice / 4;
+      }
+      var marketCapTrillions = Math.floor(priceInUSD * 21000000 / 1e12);
+
+      var priceCell = document.createElement("td");
+      priceCell.textContent = formatCurrency(currentPrice) + " (" + marketCapTrillions + " T USD)";
+      priceCell.title = "Bitcoin Price at start of year: " + formatCurrency(currentPrice);
+      row.appendChild(priceCell);
+
+      var btcCell = document.createElement("td");
+      btcCell.textContent = parseFloat(btcPurchased).toFixed(8);
+      btcCell.title = "Bitcoin purchased in this period.";
+      row.appendChild(btcCell);
+
+      var valueCell = document.createElement("td");
+      valueCell.textContent = formatCurrency(value);
+      valueCell.title = "Value at end of the period.";
+      row.appendChild(valueCell);
+
+      var cagrCell = document.createElement("td");
+      cagrCell.textContent = cagr;
+      cagrCell.title = "Effective CAGR for this year.";
+      row.appendChild(cagrCell);
+
+      var monthlyCell = document.createElement("td");
+      var monthlyText = (typeof monthlyPurchase === "number" && !isNaN(monthlyPurchase)) ? formatCurrency(monthlyPurchase) : monthlyPurchase;
+      monthlyCell.textContent = monthlyText;
+      monthlyCell.title = "Monthly purchase amount for this year.";
+      row.appendChild(monthlyCell);
+
+      if (tooltipText) {
+        row.title = tooltipText;
+      }
+      tbody.appendChild(row);
+    }
+
+    function createSummaryTable(totalInvested, totalBTC, finalPrice, finalInvestmentValue, netGain, percentageGain) {
+      var summaryDiv = document.getElementById("summary");
+      var header = document.createElement("h2");
+      header.textContent = "Accumulation Summary";
+      summaryDiv.appendChild(header);
+
+      var table = document.createElement("table");
+      table.classList.add("summary-table");
+      var tbody = document.createElement("tbody");
+
+      function addSummaryRow(description, value, tooltipText) {
         var row = document.createElement("tr");
-
-        var yearCell = document.createElement("td");
-        yearCell.textContent = year;
-        yearCell.title =
-          "Investment Year: " +
-          (year === 0 ? "Initial allocation" : "Year " + year);
-        row.appendChild(yearCell);
-
-        var priceCell = document.createElement("td");
-        priceCell.textContent = formatCurrency(currentPrice);
-        priceCell.title =
-          "Bitcoin Price at start of year: " + formatCurrency(currentPrice);
-        row.appendChild(priceCell);
-
-        var btcCell = document.createElement("td");
-        btcCell.textContent = parseFloat(btcPurchased).toFixed(8);
-        btcCell.title = "Bitcoin purchased in this period.";
-        row.appendChild(btcCell);
-
+        var descCell = document.createElement("td");
+        descCell.textContent = description;
+        descCell.title = tooltipText;
         var valueCell = document.createElement("td");
-        valueCell.textContent = formatCurrency(value);
-        valueCell.title = "Value at end of the period.";
+        valueCell.textContent = value;
+        row.appendChild(descCell);
         row.appendChild(valueCell);
-
-        var cagrCell = document.createElement("td");
-        cagrCell.textContent = cagr;
-        cagrCell.title = "Effective CAGR for this year.";
-        row.appendChild(cagrCell);
-
-        var monthlyCell = document.createElement("td");
-        var monthlyText =
-          typeof monthlyPurchase === "number" && !isNaN(monthlyPurchase)
-            ? formatCurrency(monthlyPurchase)
-            : monthlyPurchase;
-        monthlyCell.textContent = monthlyText;
-        monthlyCell.title = "Monthly purchase amount for this year.";
-        row.appendChild(monthlyCell);
-
-        if (tooltipText) {
-          row.title = tooltipText;
-        }
         tbody.appendChild(row);
       }
 
-      function createSummaryTable(
-        totalInvested,
-        totalBTC,
-        finalPrice,
-        finalInvestmentValue,
-        netGain,
-        percentageGain
-      ) {
-        var summaryDiv = document.getElementById("summary");
-        var header = document.createElement("h2");
-        header.textContent = "Accumulation Summary";
-        summaryDiv.appendChild(header);
+      addSummaryRow("Total Invested (" + currentCurrency + "):", formatCurrency(totalInvested),
+                    "The total amount invested (initial allocation + monthly contributions).");
+      addSummaryRow("Total Bitcoin Purchased (BTC):", totalBTC.toFixed(8),
+                    "The cumulative Bitcoin purchased during accumulation.");
+      addSummaryRow("Final Bitcoin Price (" + currentCurrency + "):", formatCurrency(finalPrice),
+                    "The estimated Bitcoin price at the end of the accumulation period.");
+      addSummaryRow("Final Investment Value (" + currentCurrency + "):", formatCurrency(finalInvestmentValue),
+                    "The total value of your Bitcoin holdings at the end of accumulation.");
+      addSummaryRow("Net Gain (" + currentCurrency + "):", formatCurrency(netGain),
+                    "The profit (final value minus total invested).");
+      addSummaryRow("Percentage Gain (%):", percentageGain.toFixed(0),
+                    "The overall return on your investment expressed as a percentage.");
 
-        var table = document.createElement("table");
-        table.classList.add("summary-table");
-        var tbody = document.createElement("tbody");
+      table.appendChild(tbody);
+      summaryDiv.appendChild(table);
+    }
 
-        function addSummaryRow(description, value, tooltipText) {
-          var row = document.createElement("tr");
-          var descCell = document.createElement("td");
-          descCell.textContent = description;
-          descCell.title = tooltipText;
-          var valueCell = document.createElement("td");
-          valueCell.textContent = value;
-          row.appendChild(descCell);
-          row.appendChild(valueCell);
-          tbody.appendChild(row);
+    function simulateRetirement(startPortfolio, initialMonthlyPension, pensionChange, startingRetirementCAGR, yearlyCAGRChange, retirementYears, startingBitcoinPrice) {
+      var portfolio = startPortfolio;
+      var monthlyPension = initialMonthlyPension;
+      var retirementResults = [];
+      var currentRetirementCAGR = startingRetirementCAGR;
+      var bitcoinPrice = startingBitcoinPrice;
+      
+      for (var year = 1; year <= retirementYears; year++) {
+        var startingPortfolio = portfolio;
+        var thisYearCAGR = currentRetirementCAGR;
+        var monthlyGrowthRate = Math.pow(1 + thisYearCAGR/100, 1/12) - 1;
+        for (var m = 1; m <= 12; m++) {
+          portfolio = portfolio * (1 + monthlyGrowthRate) - monthlyPension;
         }
+        var totalWithdrawal = monthlyPension * 12;
+        var endingPortfolio = portfolio;
+        var annualGrowth = endingPortfolio - startingPortfolio + totalWithdrawal;
+        retirementResults.push({
+          year: year,
+          startingPortfolio: startingPortfolio,
+          currentCAGR: thisYearCAGR,
+          monthlyPension: monthlyPension,
+          totalWithdrawal: totalWithdrawal,
+          annualGrowth: annualGrowth,
+          endingPortfolio: endingPortfolio,
+          bitcoinPrice: bitcoinPrice
+        });
+        monthlyPension = monthlyPension * (1 + pensionChange/100);
+        currentRetirementCAGR = currentRetirementCAGR * (1 - yearlyCAGRChange/100);
+        bitcoinPrice = bitcoinPrice * (1 + thisYearCAGR/100);
+      }
+      return retirementResults;
+    }
 
-        addSummaryRow(
-          "Total Invested (" + currentCurrency + "):",
-          formatCurrency(totalInvested),
-          "The total amount invested (initial allocation + monthly contributions)."
-        );
-        addSummaryRow(
-          "Total Bitcoin Purchased (BTC):",
-          totalBTC.toFixed(8),
-          "The cumulative Bitcoin purchased during accumulation."
-        );
-        addSummaryRow(
-          "Final Bitcoin Price (" + currentCurrency + "):",
-          formatCurrency(finalPrice),
-          "The estimated Bitcoin price at the end of the accumulation period."
-        );
-        addSummaryRow(
-          "Final Investment Value (" + currentCurrency + "):",
-          formatCurrency(finalInvestmentValue),
-          "The total value of your Bitcoin holdings at the end of accumulation."
-        );
-        addSummaryRow(
-          "Net Gain (" + currentCurrency + "):",
-          formatCurrency(netGain),
-          "The profit (final value minus total invested)."
-        );
-        addSummaryRow(
-          "Percentage Gain (%):",
-          percentageGain.toFixed(0),
-          "The overall return on your investment expressed as a percentage."
-        );
+    function createRetirementTable(data) {
+      var retirementDiv = document.getElementById("retirementSummary");
 
-        table.appendChild(tbody);
-        summaryDiv.appendChild(table);
+      var runOutYear = null;
+      for (var i = 0; i < data.length; i++) {
+        if (data[i].endingPortfolio <= 0) {
+          runOutYear = data[i].year;
+          break;
+        }
+      }
+      if (runOutYear !== null) {
+        var warningMsg = document.createElement("p");
+        warningMsg.textContent = "Warning: Your portfolio is projected to run out after Year " + runOutYear + ". Consider increasing your initial allocation and/or monthly contributions during the accumulation phase.";
+        warningMsg.className = "warning";
+        retirementDiv.appendChild(warningMsg);
       }
 
-      function simulateRetirement(
-        startPortfolio,
-        initialMonthlyPension,
-        pensionChange,
-        startingRetirementCAGR,
-        yearlyCAGRChange,
-        retirementYears,
-        startingBitcoinPrice
-      ) {
-        var portfolio = startPortfolio;
-        var monthlyPension = initialMonthlyPension;
-        var retirementResults = [];
-        var currentRetirementCAGR = startingRetirementCAGR;
-        var bitcoinPrice = startingBitcoinPrice;
+      var header = document.createElement("h2");
+      header.textContent = "Retirement Projection";
+      retirementDiv.appendChild(header);
 
-        for (var year = 1; year <= retirementYears; year++) {
-          var startingPortfolio = portfolio;
-          var thisYearCAGR = currentRetirementCAGR;
-          var monthlyGrowthRate = Math.pow(1 + thisYearCAGR / 100, 1 / 12) - 1;
-          for (var m = 1; m <= 12; m++) {
-            portfolio = portfolio * (1 + monthlyGrowthRate) - monthlyPension;
+      var table = document.createElement("table");
+      var thead = document.createElement("thead");
+      var headerRow = document.createElement("tr");
+      var headers = [
+         { text: "Year", tooltip: "Retirement Year (1 to N)" },
+         { text: "Bitcoin Price (" + currentCurrency + ") (Mkcap)", tooltip: "Bitcoin price at the start of the retirement year." },
+         { text: "Starting Portfolio (" + currentCurrency + ")", tooltip: "Portfolio value at the start of the retirement year." },
+         { text: "Current CAGR (%)", tooltip: "Effective annual growth rate for the year." },
+         { text: "Monthly Pension (" + currentCurrency + ")", tooltip: "Monthly pension for that year." },
+         { text: "Total Annual Withdrawal (" + currentCurrency + ")", tooltip: "Total withdrawn (Monthly Pension × 12)." },
+         { text: "Annual Growth (" + currentCurrency + ")", tooltip: "Net portfolio growth after withdrawals." },
+         { text: "Ending Portfolio (" + currentCurrency + ")", tooltip: "Portfolio value at the end of the retirement year." }
+      ];
+      headers.forEach(function(headerObj) {
+        var th = document.createElement("th");
+        th.textContent = headerObj.text;
+        th.title = headerObj.tooltip;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      var tbody = document.createElement("tbody");
+      data.forEach(function(rowData) {
+         var tr = document.createElement("tr");
+
+         var tdYear = document.createElement("td");
+         tdYear.textContent = rowData.year;
+         tr.appendChild(tdYear);
+         
+         // Compute market cap in USD using rowData.bitcoinPrice converted to USD.
+         var priceInUSD = rowData.bitcoinPrice;
+         if (currentCurrency === "EUR") {
+           priceInUSD = rowData.bitcoinPrice / 0.96;
+         } else if (currentCurrency === "PLN") {
+           priceInUSD = rowData.bitcoinPrice / 4;
+         }
+         var marketCapTrillions = Math.floor(priceInUSD * 21000000 / 1e12);
+
+         var tdBitcoinPrice = document.createElement("td");
+         tdBitcoinPrice.textContent = formatCurrency(rowData.bitcoinPrice) + " (" + marketCapTrillions + " T USD)";
+         tdBitcoinPrice.title = "Bitcoin price at the start of this retirement year.";
+         tr.appendChild(tdBitcoinPrice);
+
+         var tdStarting = document.createElement("td");
+         tdStarting.textContent = formatCurrency(rowData.startingPortfolio);
+         tr.appendChild(tdStarting);
+
+         var tdCAGR = document.createElement("td");
+         tdCAGR.textContent = rowData.currentCAGR.toFixed(0);
+         tdCAGR.title = "Effective annual growth rate for this year.";
+         tr.appendChild(tdCAGR);
+
+         var tdMonthly = document.createElement("td");
+         tdMonthly.textContent = formatCurrency(rowData.monthlyPension);
+         tr.appendChild(tdMonthly);
+
+         var tdWithdrawal = document.createElement("td");
+         tdWithdrawal.textContent = formatCurrency(rowData.totalWithdrawal);
+         tr.appendChild(tdWithdrawal);
+
+         var tdGrowth = document.createElement("td");
+         tdGrowth.textContent = formatCurrency(rowData.annualGrowth);
+         if (rowData.annualGrowth < 0) {
+           tdGrowth.style.color = "red";
+           tdGrowth.style.fontWeight = "bold";
+         }
+         tr.appendChild(tdGrowth);
+
+         var tdEnding = document.createElement("td");
+         tdEnding.textContent = formatCurrency(rowData.endingPortfolio);
+         if (rowData.endingPortfolio < 0) {
+           tdEnding.style.color = "red";
+           tdEnding.style.fontWeight = "bold";
+         }
+         tr.appendChild(tdEnding);
+
+         tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      retirementDiv.appendChild(table);
+    }
+
+    function createRetirementChart(data) {
+      var labels = data.map(function(d) { return "Year " + d.year; });
+      var endingValues = data.map(function(d) { return d.endingPortfolio; });
+      
+      var ctx = document.getElementById("retirementChart").getContext("2d");
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Ending Portfolio (" + currentCurrency + ")",
+            data: endingValues,
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) { 
+                  return '$' + value.toLocaleString(getLocaleForCurrency(currentCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                }
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '$' + context.parsed.y.toLocaleString(getLocaleForCurrency(currentCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                }
+              }
+            }
           }
-          var totalWithdrawal = monthlyPension * 12;
-          var endingPortfolio = portfolio;
-          var annualGrowth =
-            endingPortfolio - startingPortfolio + totalWithdrawal;
-          retirementResults.push({
-            year: year,
-            startingPortfolio: startingPortfolio,
-            currentCAGR: thisYearCAGR,
-            monthlyPension: monthlyPension,
-            totalWithdrawal: totalWithdrawal,
-            annualGrowth: annualGrowth,
-            endingPortfolio: endingPortfolio,
-            bitcoinPrice: bitcoinPrice,
-          });
-          monthlyPension = monthlyPension * (1 + pensionChange / 100);
-          currentRetirementCAGR =
-            currentRetirementCAGR * (1 - yearlyCAGRChange / 100);
-          bitcoinPrice = bitcoinPrice * (1 + thisYearCAGR / 100);
         }
-        return retirementResults;
-      }
-
-      function createRetirementTable(data) {
-        var retirementDiv = document.getElementById("retirementSummary");
-
-        var runOutYear = null;
-        for (var i = 0; i < data.length; i++) {
-          if (data[i].endingPortfolio <= 0) {
-            runOutYear = data[i].year;
-            break;
-          }
-        }
-        if (runOutYear !== null) {
-          var warningMsg = document.createElement("p");
-          warningMsg.textContent =
-            "Warning: Your portfolio is projected to run out after Year " +
-            runOutYear +
-            ". Consider increasing your initial allocation and/or monthly contributions during the accumulation phase.";
-          warningMsg.className = "warning";
-          retirementDiv.appendChild(warningMsg);
-        }
-
-        var header = document.createElement("h2");
-        header.textContent = "Retirement Projection";
-        retirementDiv.appendChild(header);
-
-        var table = document.createElement("table");
-        var thead = document.createElement("thead");
-        var headerRow = document.createElement("tr");
-        var headers = [
-          { text: "Year", tooltip: "Retirement Year (1 to N)" },
-          {
-            text: "Bitcoin Price (" + currentCurrency + ")",
-            tooltip: "Bitcoin price at the start of the retirement year.",
-          },
-          {
-            text: "Starting Portfolio (" + currentCurrency + ")",
-            tooltip: "Portfolio value at the start of the retirement year.",
-          },
-          {
-            text: "Current CAGR (%)",
-            tooltip: "Effective annual growth rate for the year.",
-          },
-          {
-            text: "Monthly Pension (" + currentCurrency + ")",
-            tooltip: "Monthly pension for that year.",
-          },
-          {
-            text: "Total Annual Withdrawal (" + currentCurrency + ")",
-            tooltip: "Total withdrawn (Monthly Pension × 12).",
-          },
-          {
-            text: "Annual Growth (" + currentCurrency + ")",
-            tooltip: "Net portfolio growth after withdrawals.",
-          },
-          {
-            text: "Ending Portfolio (" + currentCurrency + ")",
-            tooltip: "Portfolio value at the end of the retirement year.",
-          },
-        ];
-        headers.forEach(function (headerObj) {
-          var th = document.createElement("th");
-          th.textContent = headerObj.text;
-          th.title = headerObj.tooltip;
-          headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        var tbody = document.createElement("tbody");
-        data.forEach(function (rowData) {
-          var tr = document.createElement("tr");
-
-          var tdYear = document.createElement("td");
-          tdYear.textContent = rowData.year;
-          tr.appendChild(tdYear);
-
-          var tdBitcoinPrice = document.createElement("td");
-          tdBitcoinPrice.textContent = formatCurrency(rowData.bitcoinPrice);
-          tdBitcoinPrice.title =
-            "Bitcoin price at the start of this retirement year.";
-          tr.appendChild(tdBitcoinPrice);
-
-          var tdStarting = document.createElement("td");
-          tdStarting.textContent = formatCurrency(rowData.startingPortfolio);
-          tr.appendChild(tdStarting);
-
-          var tdCAGR = document.createElement("td");
-          tdCAGR.textContent = rowData.currentCAGR.toFixed(0);
-          tdCAGR.title = "Effective annual growth rate for this year.";
-          tr.appendChild(tdCAGR);
-
-          var tdMonthly = document.createElement("td");
-          tdMonthly.textContent = formatCurrency(rowData.monthlyPension);
-          tr.appendChild(tdMonthly);
-
-          var tdWithdrawal = document.createElement("td");
-          tdWithdrawal.textContent = formatCurrency(rowData.totalWithdrawal);
-          tr.appendChild(tdWithdrawal);
-
-          var tdGrowth = document.createElement("td");
-          tdGrowth.textContent = formatCurrency(rowData.annualGrowth);
-          if (rowData.annualGrowth < 0) {
-            tdGrowth.style.color = "red";
-            tdGrowth.style.fontWeight = "bold";
-          }
-          tr.appendChild(tdGrowth);
-
-          var tdEnding = document.createElement("td");
-          tdEnding.textContent = formatCurrency(rowData.endingPortfolio);
-          if (rowData.endingPortfolio < 0) {
-            tdEnding.style.color = "red";
-            tdEnding.style.fontWeight = "bold";
-          }
-          tr.appendChild(tdEnding);
-
-          tbody.appendChild(tr);
-        });
-
-        table.appendChild(tbody);
-        retirementDiv.appendChild(table);
-      }
-
-      function createRetirementChart(data) {
-        var labels = data.map(function (d) {
-          return "Year " + d.year;
-        });
-        var endingValues = data.map(function (d) {
-          return d.endingPortfolio;
-        });
-
-        var ctx = document.getElementById("retirementChart").getContext("2d");
-        new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: "Ending Portfolio (" + currentCurrency + ")",
-                data: endingValues,
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                borderColor: "rgba(75, 192, 192, 1)",
-                borderWidth: 2,
-                fill: true,
-                tension: 0.1,
-              },
-            ],
-          },
-          options: {
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function (value) {
-                    return (
-                      "$" +
-                      value.toLocaleString(
-                        getLocaleForCurrency(currentCurrency),
-                        { minimumFractionDigits: 0, maximumFractionDigits: 0 }
-                      )
-                    );
-                  },
-                },
-              },
-            },
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: function (context) {
-                    return (
-                      "$" +
-                      context.parsed.y.toLocaleString(
-                        getLocaleForCurrency(currentCurrency),
-                        { minimumFractionDigits: 0, maximumFractionDigits: 0 }
-                      )
-                    );
-                  },
-                },
-              },
-            },
-          },
-        });
-      }
-    </script>
-  </body>
+      });
+    }
+  </script>
+</body>
 </html>
