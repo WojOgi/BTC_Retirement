@@ -101,6 +101,11 @@
       max-width: 500px;
       margin-top: 20px;
     }
+    /* New class for the retirement projection table with full width */
+    .retirement-table {
+      width: 100%;
+      max-width: none;
+    }
     .summary-table td {
       text-align: left;
       padding: 6px;
@@ -113,8 +118,14 @@
     .currency-label {
       font-weight: bold;
     }
+    /* Ensure result sections use full screen width */
+    #result, #retirementSummary {
+      width: 100%;
+    }
+    /* Retirement Projection container uses full width */
     #retirementSummary {
       margin-top: 40px;
+      max-width: none;
     }
     .warning {
       color: red;
@@ -169,7 +180,7 @@
     }
     
     // Fetch the current Bitcoin price using the selected currency.
-    // If the API response currency doesn't match the selection, use conversion ratios.
+    // If the API response currency doesn't match, use conversion ratios.
     function updatePrice() {
       fetch("https://api.coinbase.com/v2/prices/spot?currency=" + currentCurrency)
         .then(response => {
@@ -229,7 +240,7 @@
         });
       });
       
-      // When currency is changed, update global variable and labels.
+      // When currency is changed, update the global variable and labels.
       currencySelect.addEventListener("change", function() {
         currentCurrency = this.value;
         updateCurrencyLabels();
@@ -621,7 +632,7 @@
       retirementDiv.appendChild(header);
 
       var table = document.createElement("table");
-      table.classList.add("summary-table");
+      table.classList.add("retirement-table");
       var thead = document.createElement("thead");
       var headerRow = document.createElement("tr");
       var headers = [
