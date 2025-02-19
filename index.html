@@ -40,6 +40,13 @@
         vertical-align: top;
         margin-bottom: 5px;
       }
+      /* Smaller tooltip icon in yellow */
+      .tooltip-icon {
+        margin-left: 5px;
+        color: yellow;
+        cursor: help;
+        font-size: 0.75em;
+      }
       button {
         padding: 10px 20px;
         margin-top: 10px;
@@ -124,11 +131,13 @@
       <div id="inputArea">
         <!-- Accumulation Phase Inputs -->
         <div>
-          <label
-            for="currentPrice"
-            title="Enter the current Bitcoin price in USD. This value is used for the initial purchase calculation."
-          >
+          <label for="currentPrice">
             Current Bitcoin Price (USD):
+            <span
+              class="tooltip-icon"
+              title="Enter the current Bitcoin price in USD. This value is used for the initial purchase calculation."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -136,15 +145,18 @@
             placeholder="e.g. 95000"
             step="any"
             value="95000"
-            title="Enter the current Bitcoin price in USD."
+            min="1"
+            max="1000000"
           />
         </div>
         <div>
-          <label
-            for="expectedCAGR"
-            title="Enter your expected annual CAGR for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
-          >
+          <label for="expectedCAGR">
             Expected Future CAGR (%)
+            <span
+              class="tooltip-icon"
+              title="Enter your expected annual CAGR for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
+              >&#x2753;</span
+            >
             <span class="hint">(historical: 5-year: 56%, 10-year: 82%)</span>:
           </label>
           <input
@@ -153,15 +165,18 @@
             placeholder="e.g. 40"
             step="any"
             value="40"
-            title="Enter your expected annual CAGR for Bitcoin."
+            min="-100"
+            max="200"
           />
         </div>
         <div>
-          <label
-            for="yearlyCAGRChange"
-            title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38%."
-          >
+          <label for="yearlyCAGRChange">
             Yearly CAGR Change (relative %) (e.g. 5 means reduce by 5%):
+            <span
+              class="tooltip-icon"
+              title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38%."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -169,15 +184,18 @@
             placeholder="e.g. 5"
             step="any"
             value="5"
-            title="Enter the relative percentage reduction to apply each year."
+            min="0"
+            max="100"
           />
         </div>
         <div>
-          <label
-            for="initialAllocation"
-            title="Enter the lump sum amount in USD used to purchase Bitcoin at the current price."
-          >
+          <label for="initialAllocation">
             Initial Allocation (USD):
+            <span
+              class="tooltip-icon"
+              title="Enter the lump sum amount in USD used to purchase Bitcoin at the current price."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -185,15 +203,18 @@
             placeholder="e.g. 25000"
             step="any"
             value="25000"
-            title="Enter your initial lump sum in USD."
+            min="0"
+            max="1000000000"
           />
         </div>
         <div>
-          <label
-            for="monthlyPurchase"
-            title="Enter the amount in USD you plan to invest each month to purchase Bitcoin."
-          >
+          <label for="monthlyPurchase">
             Monthly Purchase (USD):
+            <span
+              class="tooltip-icon"
+              title="Enter the amount in USD you plan to invest each month to purchase Bitcoin."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -201,15 +222,18 @@
             placeholder="e.g. 1000"
             step="any"
             value="1000"
-            title="Enter the monthly purchase amount in USD."
+            min="0"
+            max="1000000"
           />
         </div>
         <div>
-          <label
-            for="monthlyPurchaseChange"
-            title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0 means no change."
-          >
+          <label for="monthlyPurchaseChange">
             Yearly Change in Monthly Purchase (%):
+            <span
+              class="tooltip-icon"
+              title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0 means no change."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -217,15 +241,18 @@
             placeholder="e.g. 0"
             step="any"
             value="0"
-            title="Enter the yearly percentage change in your monthly purchase amount."
+            min="-100"
+            max="100"
           />
         </div>
         <div>
-          <label
-            for="years"
-            title="Enter the total number of years over which you plan to invest in Bitcoin."
-          >
+          <label for="years">
             Number of Years to Invest:
+            <span
+              class="tooltip-icon"
+              title="Enter the total number of years over which you plan to invest in Bitcoin."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -233,17 +260,20 @@
             placeholder="e.g. 5"
             step="1"
             value="5"
-            title="Enter the number of years you plan to invest."
+            min="1"
+            max="100"
           />
         </div>
 
         <!-- Retirement Phase Inputs -->
         <div>
-          <label
-            for="desiredPension"
-            title="Enter the desired monthly pension you want during retirement (in USD)."
-          >
+          <label for="desiredPension">
             Desired Monthly Pension (USD):
+            <span
+              class="tooltip-icon"
+              title="Enter the desired monthly pension you want during retirement (in USD)."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -251,15 +281,18 @@
             placeholder="e.g. 3000"
             step="any"
             value="3000"
-            title="Enter your desired monthly pension in USD."
+            min="0"
+            max="100000"
           />
         </div>
         <div>
-          <label
-            for="pensionChange"
-            title="Enter the yearly percentage change for your monthly pension during retirement."
-          >
+          <label for="pensionChange">
             Yearly Change in Monthly Pension During Retirement (%):
+            <span
+              class="tooltip-icon"
+              title="Enter the yearly percentage change for your monthly pension during retirement."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -267,15 +300,18 @@
             placeholder="e.g. 2"
             step="any"
             value="2"
-            title="Enter the yearly percentage increase for your monthly pension."
+            min="-100"
+            max="100"
           />
         </div>
         <div>
-          <label
-            for="retirementYears"
-            title="Enter the total number of years for your retirement projection."
-          >
+          <label for="retirementYears">
             Number of Retirement Years:
+            <span
+              class="tooltip-icon"
+              title="Enter the total number of years for your retirement projection."
+              >&#x2753;</span
+            >
           </label>
           <input
             type="number"
@@ -283,7 +319,8 @@
             placeholder="e.g. 15"
             step="1"
             value="15"
-            title="Enter the number of years for your retirement projection."
+            min="1"
+            max="100"
           />
         </div>
         <button onclick="calculate()">Calculate</button>
@@ -339,7 +376,7 @@
     </div>
 
     <script>
-      // Helper function to format USD values (rounded to the nearest dollar with commas).
+      // Helper function to format USD values rounded to the nearest dollar with commas.
       function formatUSD(num) {
         return (
           parseFloat(num).toLocaleString("en-US", {
@@ -412,6 +449,7 @@
         var value = btcPurchased * price; // Equals the initial allocation.
         totalBTC += btcPurchased;
         totalInvested += initialAllocation;
+        // For Year 0, display dash for Monthly Purchase.
         addRow(
           0,
           price,
@@ -459,7 +497,7 @@
         var netGain = finalInvestmentValue - totalInvested;
         var percentageGain = (netGain / totalInvested) * 100;
 
-        // Create the accumulation summary table (this will appear to the right of the input area).
+        // Create the accumulation summary table.
         createSummaryTable(
           totalInvested,
           totalBTC,
@@ -505,7 +543,6 @@
       }
 
       // Adds a row to the accumulation breakdown table.
-      // USD values are formatted using formatUSD().
       function addRow(
         year,
         currentPrice,
@@ -547,7 +584,12 @@
         row.appendChild(cagrCell);
 
         var monthlyCell = document.createElement("td");
-        monthlyCell.textContent = formatUSD(monthlyPurchase);
+        // If monthlyPurchase is a number, format it; otherwise display dash.
+        var monthlyText =
+          typeof monthlyPurchase === "number" && !isNaN(monthlyPurchase)
+            ? formatUSD(monthlyPurchase)
+            : monthlyPurchase;
+        monthlyCell.textContent = monthlyText;
         monthlyCell.title = "Monthly purchase amount for this year.";
         row.appendChild(monthlyCell);
 
