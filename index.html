@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bitcoin Retirement Calculator</title>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.6;
+        background-color: #fafafa;
+        color: #333;
+      }
+      /* Flex container for input area and accumulation summary */
+      .input-summary-container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+      }
+      #inputArea {
+        flex: 1;
+        min-width: 300px;
+      }
+      #summary {
+        flex: 1;
+        min-width: 300px;
+      }
+      input {
+        margin-bottom: 10px;
+        padding: 5px;
+        width: 250px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      label {
+        display: inline-block;
+        width: 350px;
+        vertical-align: top;
+        margin-bottom: 5px;
+      }
+      button {
+        padding: 10px 20px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 4px;
+        background-color: #4caf50;
+        color: white;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      table {
+        border-collapse: collapse;
+        margin-top: 20px;
+        width: 100%;
+        background-color: #fff;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+        text-align: center;
+      }
+      th {
+        background-color: #f0f0f0;
+      }
+      .summary-table {
+        max-width: 500px;
+        margin-top: 20px;
+      }
+      .summary-table td {
+        text-align: left;
+        padding: 6px;
+      }
+      .hint {
+        font-size: 0.9em;
+        color: #555;
+      }
+      #retirementSummary {
+        margin-top: 40px;
+      }
+      .warning {
+        color: red;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      /* Chart container styling */
+      #chartContainer {
+        margin-top: 20px;
+      }
+      /* Set a reduced chart height */
+      #retirementChart {
+        height: 200px !important;
+      }
+      /* Explanatory text styling */
+      #explanation {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #e9f5ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Bitcoin Retirement Calculator</h1>
+    <div id="explanation">
+      This app helps you project the growth of your Bitcoin investment over an
+      accumulation phase and then simulates your retirement portfolio, taking
+      into account monthly investments and subsequent withdrawals. For example,
+      if you start with a $25,000 lump sum and invest $1,000 per month at an
+      expected 40% CAGR (with a 5% annual decrease in growth), the app
+      calculates your final portfolio value and then projects how long it can
+      support a desired monthly pension during retirement. Adjust the parameters
+      to see how different scenarios affect your retirement planning.
+    </div>
+
+    <!-- Container for User Inputs and Accumulation Summary -->
+    <div class="input-summary-container">
+      <!-- User Input Area -->
+      <div id="inputArea">
+        <!-- Accumulation Phase Inputs -->
+        <div>
+          <label
+            for="currentPrice"
+            title="Enter the current Bitcoin price in USD. This value is used for the initial purchase calculation."
+          >
+            Current Bitcoin Price (USD):
+          </label>
+          <input
+            type="number"
+            id="currentPrice"
+            placeholder="e.g. 95000"
+            step="any"
+            value="95000"
+            title="Enter the current Bitcoin price in USD. This value is used for the initial purchase calculation."
+          />
+        </div>
+        <div>
+          <label
+            for="expectedCAGR"
+            title="Enter your expected annual CAGR for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
+          >
+            Expected Future CAGR (%)
+            <span class="hint">(historical: 5-year: 56%, 10-year: 82%)</span>:
+          </label>
+          <input
+            type="number"
+            id="expectedCAGR"
+            placeholder="e.g. 40"
+            step="any"
+            value="40"
+            title="Enter your expected annual Compound Annual Growth Rate (CAGR) for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
+          />
+        </div>
+        <div>
+          <label
+            for="yearlyCAGRChange"
+            title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38%."
+          >
+            Yearly CAGR Change (relative %) (e.g. 5 means reduce by 5%):
+          </label>
+          <input
+            type="number"
+            id="yearlyCAGRChange"
+            placeholder="e.g. 5"
+            step="any"
+            value="5"
+            title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38% the following year."
+          />
+        </div>
+        <div>
+          <label
+            for="initialAllocation"
+            title="Enter the lump sum amount in USD used to purchase Bitcoin at the current price."
+          >
+            Initial Allocation (USD):
+          </label>
+          <input
+            type="number"
+            id="initialAllocation"
+            placeholder="e.g. 25000"
+            step="any"
+            value="25000"
+            title="Enter the initial lump sum amount in USD used to purchase Bitcoin at the current price."
+          />
+        </div>
+        <div>
+          <label
+            for="monthlyPurchase"
+            title="Enter the amount in USD you plan to invest each month to purchase Bitcoin."
+          >
+            Monthly Purchase (USD):
+          </label>
+          <input
+            type="number"
+            id="monthlyPurchase"
+            placeholder="e.g. 1000"
+            step="any"
+            value="1000"
+            title="Enter the amount in USD you plan to invest each month to purchase Bitcoin."
+          />
+        </div>
+        <div>
+          <label
+            for="monthlyPurchaseChange"
+            title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0 means no change."
+          >
+            Yearly Change in Monthly Purchase (%):
+          </label>
+          <input
+            type="number"
+            id="monthlyPurchaseChange"
+            placeholder="e.g. 0"
+            step="any"
+            value="0"
+            title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0% means no change."
+          />
+        </div>
+        <div>
+          <label
+            for="years"
+            title="Enter the total number of years over which you plan to invest in Bitcoin."
+          >
+            Number of Years to Invest:
+          </label>
+          <input
+            type="number"
+            id="years"
+            placeholder="e.g. 5"
+            step="1"
+            value="5"
+            title="Enter the total number of years over which you plan to invest in Bitcoin."
+          />
+        </div>
+
+        <!-- Retirement Phase Inputs -->
+        <div>
+          <label
+            for="desiredPension"
+            title="Enter the desired monthly pension you want during retirement (in USD)."
+          >
+            Desired Monthly Pension (USD):
+          </label>
+          <input
+            type="number"
+            id="desiredPension"
+            placeholder="e.g. 3000"
+            step="any"
+            value="3000"
+            title="Enter the desired monthly pension you want during retirement (in USD)."
+          />
+        </div>
+        <div>
+          <label
+            for="pensionChange"
+            title="Enter the yearly percentage change for your monthly pension during retirement."
+          >
+            Yearly Change in Monthly Pension During Retirement (%):
+          </label>
+          <input
+            type="number"
+            id="pensionChange"
+            placeholder="e.g. 2"
+            step="any"
+            value="2"
+            title="Enter the yearly percentage change for your monthly pension during retirement. For example, 2 means a 2% increase per year."
+          />
+        </div>
+        <div>
+          <label
+            for="retirementYears"
+            title="Enter the total number of years for your retirement projection."
+          >
+            Number of Retirement Years:
+          </label>
+          <input
+            type="number"
+            id="retirementYears"
+            placeholder="e.g. 15"
+            step="1"
+            value="15"
+            title="Enter the total number of years for your retirement projection."
+          />
+        </div>
+        <button onclick="calculate()">Calculate</button>
+      </div>
+
+      <!-- Accumulation Summary will be injected here by JavaScript -->
+      <div id="summary"></div>
+    </div>
+
+    <!-- Accumulation Phase Yearly Breakdown Table -->
+    <div id="result">
+      <h2>Yearly Investment Breakdown</h2>
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th
+              title="Investment Year: Year 0 represents the initial lump sum purchase; subsequent years are for monthly investments."
+            >
+              Year
+            </th>
+            <th title="Bitcoin price at the start of the year.">
+              Current Price (USD)
+            </th>
+            <th
+              title="Amount of Bitcoin purchased during the period (invested USD divided by average price)."
+            >
+              Bitcoin Purchased (BTC)
+            </th>
+            <th
+              title="USD value of the Bitcoin purchased at the end of the year."
+            >
+              Value (USD)
+            </th>
+            <th
+              title="Effective annual CAGR for that year after applying the relative reduction."
+            >
+              Current CAGR (%)
+            </th>
+            <th title="Monthly investment amount for that year.">
+              Monthly Purchase (USD)
+            </th>
+          </tr>
+        </thead>
+        <tbody id="resultBody">
+          <!-- Yearly rows will be added here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Retirement Projection Table and Chart -->
+    <div id="retirementSummary">
+      <!-- Warning message (if applicable), retirement projection table, and chart will be injected here -->
+    </div>
+
+    <script>
+      function calculate() {
+        // Clear previous results.
+        document.getElementById("resultBody").innerHTML = "";
+        document.getElementById("summary").innerHTML = "";
+        document.getElementById("retirementSummary").innerHTML = "";
+
+        // Re-add chart container in retirementSummary div.
+        var retirementDiv = document.getElementById("retirementSummary");
+        var chartDiv = document.createElement("div");
+        chartDiv.id = "chartContainer";
+        chartDiv.style.marginTop = "20px";
+        var canvas = document.createElement("canvas");
+        canvas.id = "retirementChart";
+        canvas.style.height = "200px";
+        chartDiv.appendChild(canvas);
+        retirementDiv.appendChild(chartDiv);
+
+        // Retrieve accumulation input values.
+        var currentPriceInput = parseFloat(
+          document.getElementById("currentPrice").value
+        );
+        var expectedCAGR = parseFloat(
+          document.getElementById("expectedCAGR").value
+        );
+        var yearlyCAGRChange = parseFloat(
+          document.getElementById("yearlyCAGRChange").value
+        );
+        var initialAllocation = parseFloat(
+          document.getElementById("initialAllocation").value
+        );
+        var monthlyPurchase = parseFloat(
+          document.getElementById("monthlyPurchase").value
+        );
+        var monthlyPurchaseChange = parseFloat(
+          document.getElementById("monthlyPurchaseChange").value
+        );
+        var years = parseInt(document.getElementById("years").value, 10);
+
+        if (
+          isNaN(currentPriceInput) ||
+          isNaN(expectedCAGR) ||
+          isNaN(yearlyCAGRChange) ||
+          isNaN(initialAllocation) ||
+          isNaN(monthlyPurchase) ||
+          isNaN(monthlyPurchaseChange) ||
+          isNaN(years)
+        ) {
+          alert("Please fill in all accumulation fields with valid numbers.");
+          return;
+        }
+
+        // Initialize accumulation phase variables.
+        var price = currentPriceInput; // Starting Bitcoin price.
+        var currentCAGR = expectedCAGR; // Initial CAGR for accumulation.
+        var currentMonthlyPurchase = monthlyPurchase;
+        var totalBTC = 0;
+        var totalInvested = 0;
+
+        // --- Year 0: Initial Allocation ---
+        var btcPurchased = initialAllocation / price;
+        var value = btcPurchased * price; // Equals the initial allocation.
+        totalBTC += btcPurchased;
+        totalInvested += initialAllocation;
+        addRow(
+          0,
+          price,
+          btcPurchased,
+          value,
+          "-",
+          "-",
+          "Year 0 uses your initial allocation to purchase Bitcoin at the current price."
+        );
+
+        // --- Accumulation: Yearly Calculations ---
+        for (var i = 1; i <= years; i++) {
+          var startingPrice = price; // Bitcoin price at the start of the year.
+          var endPrice = startingPrice * (1 + currentCAGR / 100);
+          var avgPrice = (startingPrice + endPrice) / 2;
+          var totalInvestmentYear = currentMonthlyPurchase * 12;
+          var btcPurchasedYear = totalInvestmentYear / avgPrice;
+          var valueYear = btcPurchasedYear * endPrice;
+
+          totalBTC += btcPurchasedYear;
+          totalInvested += totalInvestmentYear;
+
+          addRow(
+            i,
+            startingPrice,
+            btcPurchasedYear,
+            valueYear,
+            currentCAGR.toFixed(2),
+            currentMonthlyPurchase.toFixed(2),
+            "For Year " +
+              i +
+              ", monthly investments purchase Bitcoin using an average price over the year."
+          );
+
+          // Prepare values for the next year.
+          price = endPrice; // End-of-year price becomes next year's starting price.
+          currentCAGR = currentCAGR * (1 - yearlyCAGRChange / 100); // Relative reduction in CAGR.
+          currentMonthlyPurchase =
+            currentMonthlyPurchase * (1 + monthlyPurchaseChange / 100); // Update monthly purchase.
+        }
+
+        // Final accumulation results.
+        var finalPrice = price;
+        var finalInvestmentValue = totalBTC * finalPrice;
+        var netGain = finalInvestmentValue - totalInvested;
+        var percentageGain = (netGain / totalInvested) * 100;
+
+        // Create the accumulation summary table (this will appear to the right of the input area).
+        createSummaryTable(
+          totalInvested,
+          totalBTC,
+          finalPrice,
+          finalInvestmentValue,
+          netGain,
+          percentageGain
+        );
+
+        // Retrieve retirement input values.
+        var desiredPension = parseFloat(
+          document.getElementById("desiredPension").value
+        );
+        var pensionChange = parseFloat(
+          document.getElementById("pensionChange").value
+        );
+        var retirementYears = parseInt(
+          document.getElementById("retirementYears").value,
+          10
+        );
+        if (
+          isNaN(desiredPension) ||
+          isNaN(pensionChange) ||
+          isNaN(retirementYears)
+        ) {
+          alert("Please fill in all retirement fields with valid numbers.");
+          return;
+        }
+
+        // Use the final accumulation CAGR (currentCAGR) as the starting retirement CAGR.
+        var retirementResults = simulateRetirement(
+          finalInvestmentValue,
+          desiredPension,
+          pensionChange,
+          currentCAGR,
+          yearlyCAGRChange,
+          retirementYears
+        );
+        createRetirementTable(retirementResults);
+        createRetirementChart(retirementResults);
+      }
+
+      // Adds a row to the accumulation breakdown table.
+      function addRow(
+        year,
+        currentPrice,
+        btcPurchased,
+        value,
+        cagr,
+        monthlyPurchase,
+        tooltipText
+      ) {
+        var tbody = document.getElementById("resultBody");
+        var row = document.createElement("tr");
+
+        var yearCell = document.createElement("td");
+        yearCell.textContent = year;
+        yearCell.title =
+          "Investment Year: " +
+          (year === 0 ? "Initial allocation" : "Year " + year);
+        row.appendChild(yearCell);
+
+        var priceCell = document.createElement("td");
+        priceCell.textContent = parseFloat(currentPrice).toFixed(2);
+        priceCell.title =
+          "Bitcoin Price at start of year: $" +
+          parseFloat(currentPrice).toFixed(2);
+        row.appendChild(priceCell);
+
+        var btcCell = document.createElement("td");
+        btcCell.textContent = parseFloat(btcPurchased).toFixed(8);
+        btcCell.title = "Bitcoin purchased in this period.";
+        row.appendChild(btcCell);
+
+        var valueCell = document.createElement("td");
+        valueCell.textContent = parseFloat(value).toFixed(2);
+        valueCell.title = "USD value of Bitcoin at end of the period.";
+        row.appendChild(valueCell);
+
+        var cagrCell = document.createElement("td");
+        cagrCell.textContent = cagr;
+        cagrCell.title = "Effective CAGR for this year.";
+        row.appendChild(cagrCell);
+
+        var monthlyCell = document.createElement("td");
+        monthlyCell.textContent = monthlyPurchase;
+        monthlyCell.title = "Monthly purchase amount for this year.";
+        row.appendChild(monthlyCell);
+
+        if (tooltipText) {
+          row.title = tooltipText;
+        }
+
+        tbody.appendChild(row);
+      }
+
+      // Creates the accumulation summary table.
+      function createSummaryTable(
+        totalInvested,
+        totalBTC,
+        finalPrice,
+        finalInvestmentValue,
+        netGain,
+        percentageGain
+      ) {
+        var summaryDiv = document.getElementById("summary");
+        var header = document.createElement("h2");
+        header.textContent = "Accumulation Summary";
+        summaryDiv.appendChild(header);
+
+        var table = document.createElement("table");
+        table.classList.add("summary-table");
+        var tbody = document.createElement("tbody");
+
+        function addSummaryRow(description, value, tooltipText) {
+          var row = document.createElement("tr");
+          var descCell = document.createElement("td");
+          descCell.textContent = description;
+          descCell.title = tooltipText;
+          var valueCell = document.createElement("td");
+          valueCell.textContent = value;
+          row.appendChild(descCell);
+          row.appendChild(valueCell);
+          tbody.appendChild(row);
+        }
+
+        addSummaryRow(
+          "Total Invested (USD):",
+          totalInvested.toFixed(2),
+          "The total amount invested (initial allocation + monthly contributions)."
+        );
+        addSummaryRow(
+          "Total Bitcoin Purchased (BTC):",
+          totalBTC.toFixed(8),
+          "The cumulative Bitcoin purchased during accumulation."
+        );
+        addSummaryRow(
+          "Final Bitcoin Price (USD):",
+          finalPrice.toFixed(2),
+          "The estimated Bitcoin price at the end of the accumulation period."
+        );
+        addSummaryRow(
+          "Final Investment Value (USD):",
+          finalInvestmentValue.toFixed(2),
+          "The total USD value of your Bitcoin holdings at the end of accumulation."
+        );
+        addSummaryRow(
+          "Net Gain (USD):",
+          netGain.toFixed(2),
+          "The profit in USD (final value minus total invested)."
+        );
+        addSummaryRow(
+          "Percentage Gain (%):",
+          percentageGain.toFixed(2),
+          "The overall return on your investment expressed as a percentage."
+        );
+
+        table.appendChild(tbody);
+        summaryDiv.appendChild(table);
+      }
+
+      // Simulates the retirement phase over the specified number of years.
+      function simulateRetirement(
+        startPortfolio,
+        initialMonthlyPension,
+        pensionChange,
+        startingRetirementCAGR,
+        yearlyCAGRChange,
+        retirementYears
+      ) {
+        var portfolio = startPortfolio;
+        var monthlyPension = initialMonthlyPension;
+        var retirementResults = [];
+        var currentRetirementCAGR = startingRetirementCAGR;
+
+        for (var year = 1; year <= retirementYears; year++) {
+          var startingPortfolio = portfolio;
+          var thisYearCAGR = currentRetirementCAGR;
+          var monthlyGrowthRate = Math.pow(1 + thisYearCAGR / 100, 1 / 12) - 1;
+
+          for (var m = 1; m <= 12; m++) {
+            portfolio = portfolio * (1 + monthlyGrowthRate) - monthlyPension;
+          }
+
+          var totalWithdrawal = monthlyPension * 12;
+          var endingPortfolio = portfolio;
+          var annualGrowth =
+            endingPortfolio - startingPortfolio + totalWithdrawal;
+          retirementResults.push({
+            year: year,
+            startingPortfolio: startingPortfolio,
+            currentCAGR: thisYearCAGR,
+            monthlyPension: monthlyPension,
+            totalWithdrawal: totalWithdrawal,
+            annualGrowth: annualGrowth,
+            endingPortfolio: endingPortfolio,
+          });
+          monthlyPension = monthlyPension * (1 + pensionChange / 100);
+          currentRetirementCAGR =
+            currentRetirementCAGR * (1 - yearlyCAGRChange / 100);
+        }
+        return retirementResults;
+      }
+
+      // Creates the retirement projection table.
+      function createRetirementTable(data) {
+        var retirementDiv = document.getElementById("retirementSummary");
+
+        // Check if portfolio runs out.
+        var runOutYear = null;
+        for (var i = 0; i < data.length; i++) {
+          if (data[i].endingPortfolio <= 0) {
+            runOutYear = data[i].year;
+            break;
+          }
+        }
+        if (runOutYear !== null) {
+          var warningMsg = document.createElement("p");
+          warningMsg.textContent =
+            "Warning: Your portfolio is projected to run out after Year " +
+            runOutYear +
+            ".";
+          warningMsg.className = "warning";
+          retirementDiv.appendChild(warningMsg);
+        }
+
+        var header = document.createElement("h2");
+        header.textContent = "Retirement Projection";
+        retirementDiv.appendChild(header);
+
+        var table = document.createElement("table");
+        var thead = document.createElement("thead");
+        var headerRow = document.createElement("tr");
+        var headers = [
+          { text: "Year", tooltip: "Retirement Year (1 to N)" },
+          {
+            text: "Starting Portfolio (USD)",
+            tooltip: "Portfolio value at the start of the retirement year.",
+          },
+          {
+            text: "Current CAGR (%)",
+            tooltip: "Effective annual growth rate for the year.",
+          },
+          {
+            text: "Monthly Pension (USD)",
+            tooltip: "Monthly pension for that year.",
+          },
+          {
+            text: "Total Annual Withdrawal (USD)",
+            tooltip: "Total withdrawn (Monthly Pension × 12).",
+          },
+          {
+            text: "Annual Growth (USD)",
+            tooltip: "Net portfolio growth after withdrawals.",
+          },
+          {
+            text: "Ending Portfolio (USD)",
+            tooltip: "Portfolio value at the end of the year.",
+          },
+        ];
+        headers.forEach(function (headerObj) {
+          var th = document.createElement("th");
+          th.textContent = headerObj.text;
+          th.title = headerObj.tooltip;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        var tbody = document.createElement("tbody");
+        data.forEach(function (rowData) {
+          var tr = document.createElement("tr");
+
+          var tdYear = document.createElement("td");
+          tdYear.textContent = rowData.year;
+          tr.appendChild(tdYear);
+
+          var tdStarting = document.createElement("td");
+          tdStarting.textContent = rowData.startingPortfolio.toFixed(2);
+          tr.appendChild(tdStarting);
+
+          var tdCAGR = document.createElement("td");
+          tdCAGR.textContent = rowData.currentCAGR.toFixed(2);
+          tdCAGR.title = "Effective annual growth rate for this year.";
+          tr.appendChild(tdCAGR);
+
+          var tdMonthly = document.createElement("td");
+          tdMonthly.textContent = rowData.monthlyPension.toFixed(2);
+          tr.appendChild(tdMonthly);
+
+          var tdWithdrawal = document.createElement("td");
+          tdWithdrawal.textContent = rowData.totalWithdrawal.toFixed(2);
+          tr.appendChild(tdWithdrawal);
+
+          var tdGrowth = document.createElement("td");
+          tdGrowth.textContent = rowData.annualGrowth.toFixed(2);
+          if (rowData.annualGrowth < 0) {
+            tdGrowth.style.color = "red";
+            tdGrowth.style.fontWeight = "bold";
+          }
+          tr.appendChild(tdGrowth);
+
+          var tdEnding = document.createElement("td");
+          tdEnding.textContent = rowData.endingPortfolio.toFixed(2);
+          if (rowData.endingPortfolio < 0) {
+            tdEnding.style.color = "red";
+            tdEnding.style.fontWeight = "bold";
+          }
+          tr.appendChild(tdEnding);
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        retirementDiv.appendChild(table);
+      }
+
+      // Creates a line chart for Ending Portfolio (USD) over retirement years.
+      function createRetirementChart(data) {
+        var labels = data.map(function (d) {
+          return "Year " + d.year;
+        });
+        var endingValues = data.map(function (d) {
+          return d.endingPortfolio;
+        });
+
+        var ctx = document.getElementById("retirementChart").getContext("2d");
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Ending Portfolio (USD)",
+                data: endingValues,
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+              },
+            ],
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) {
+                    return "$" + value;
+                  },
+                },
+              },
+            },
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return "$" + context.parsed.y;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+    </script>
+  </body>
+</html>
