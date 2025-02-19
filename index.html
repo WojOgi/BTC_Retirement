@@ -108,14 +108,14 @@
   <body>
     <h1>Bitcoin Retirement Calculator</h1>
     <div id="explanation">
-      This app helps you project the growth of your Bitcoin investment over an
-      accumulation phase and then simulates your retirement portfolio, taking
+      This app helps you project the growth of your Bitcoin investment during an
+      accumulation phase and then simulates your retirement portfolio – taking
       into account monthly investments and subsequent withdrawals. For example,
       if you start with a $25,000 lump sum and invest $1,000 per month at an
-      expected 40% CAGR (with a 5% annual decrease in growth), the app
+      expected 40% CAGR (with a 5% annual reduction in growth), the app
       calculates your final portfolio value and then projects how long it can
-      support a desired monthly pension during retirement. Adjust the parameters
-      to see how different scenarios affect your retirement planning.
+      support your desired monthly pension during retirement. Adjust the
+      parameters to see how different scenarios affect your retirement planning.
     </div>
 
     <!-- Container for User Inputs and Accumulation Summary -->
@@ -136,7 +136,7 @@
             placeholder="e.g. 95000"
             step="any"
             value="95000"
-            title="Enter the current Bitcoin price in USD. This value is used for the initial purchase calculation."
+            title="Enter the current Bitcoin price in USD."
           />
         </div>
         <div>
@@ -153,7 +153,7 @@
             placeholder="e.g. 40"
             step="any"
             value="40"
-            title="Enter your expected annual Compound Annual Growth Rate (CAGR) for Bitcoin. Historical data shows a 5-year CAGR of 56% and a 10-year CAGR of 82%."
+            title="Enter your expected annual CAGR for Bitcoin."
           />
         </div>
         <div>
@@ -169,7 +169,7 @@
             placeholder="e.g. 5"
             step="any"
             value="5"
-            title="Enter the relative percentage reduction to apply to the current CAGR each year. For example, if set to 5, a 40% CAGR becomes 38% the following year."
+            title="Enter the relative percentage reduction to apply each year."
           />
         </div>
         <div>
@@ -185,7 +185,7 @@
             placeholder="e.g. 25000"
             step="any"
             value="25000"
-            title="Enter the initial lump sum amount in USD used to purchase Bitcoin at the current price."
+            title="Enter your initial lump sum in USD."
           />
         </div>
         <div>
@@ -201,7 +201,7 @@
             placeholder="e.g. 1000"
             step="any"
             value="1000"
-            title="Enter the amount in USD you plan to invest each month to purchase Bitcoin."
+            title="Enter the monthly purchase amount in USD."
           />
         </div>
         <div>
@@ -217,7 +217,7 @@
             placeholder="e.g. 0"
             step="any"
             value="0"
-            title="Enter the relative percentage change for your monthly purchase amount each year. For example, 0% means no change."
+            title="Enter the yearly percentage change in your monthly purchase amount."
           />
         </div>
         <div>
@@ -233,7 +233,7 @@
             placeholder="e.g. 5"
             step="1"
             value="5"
-            title="Enter the total number of years over which you plan to invest in Bitcoin."
+            title="Enter the number of years you plan to invest."
           />
         </div>
 
@@ -251,7 +251,7 @@
             placeholder="e.g. 3000"
             step="any"
             value="3000"
-            title="Enter the desired monthly pension you want during retirement (in USD)."
+            title="Enter your desired monthly pension in USD."
           />
         </div>
         <div>
@@ -267,7 +267,7 @@
             placeholder="e.g. 2"
             step="any"
             value="2"
-            title="Enter the yearly percentage change for your monthly pension during retirement. For example, 2 means a 2% increase per year."
+            title="Enter the yearly percentage increase for your monthly pension."
           />
         </div>
         <div>
@@ -283,7 +283,7 @@
             placeholder="e.g. 15"
             step="1"
             value="15"
-            title="Enter the total number of years for your retirement projection."
+            title="Enter the number of years for your retirement projection."
           />
         </div>
         <button onclick="calculate()">Calculate</button>
@@ -305,7 +305,7 @@
               Year
             </th>
             <th title="Bitcoin price at the start of the year.">
-              Current Price (USD)
+              Current Bitcoin Price (USD)
             </th>
             <th
               title="Amount of Bitcoin purchased during the period (invested USD divided by average price)."
@@ -339,6 +339,16 @@
     </div>
 
     <script>
+      // Helper function to format USD values (rounded to the nearest dollar with commas).
+      function formatUSD(num) {
+        return (
+          parseFloat(num).toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }) + " USD"
+        );
+      }
+
       function calculate() {
         // Clear previous results.
         document.getElementById("resultBody").innerHTML = "";
@@ -430,7 +440,7 @@
             btcPurchasedYear,
             valueYear,
             currentCAGR.toFixed(2),
-            currentMonthlyPurchase.toFixed(2),
+            currentMonthlyPurchase,
             "For Year " +
               i +
               ", monthly investments purchase Bitcoin using an average price over the year."
@@ -480,19 +490,22 @@
         }
 
         // Use the final accumulation CAGR (currentCAGR) as the starting retirement CAGR.
+        // Also pass finalPrice (the final Bitcoin price from accumulation) for tracking Bitcoin price during retirement.
         var retirementResults = simulateRetirement(
           finalInvestmentValue,
           desiredPension,
           pensionChange,
           currentCAGR,
           yearlyCAGRChange,
-          retirementYears
+          retirementYears,
+          finalPrice
         );
         createRetirementTable(retirementResults);
         createRetirementChart(retirementResults);
       }
 
       // Adds a row to the accumulation breakdown table.
+      // USD values are formatted using formatUSD().
       function addRow(
         year,
         currentPrice,
@@ -513,10 +526,9 @@
         row.appendChild(yearCell);
 
         var priceCell = document.createElement("td");
-        priceCell.textContent = parseFloat(currentPrice).toFixed(2);
+        priceCell.textContent = formatUSD(currentPrice);
         priceCell.title =
-          "Bitcoin Price at start of year: $" +
-          parseFloat(currentPrice).toFixed(2);
+          "Bitcoin Price at start of year: " + formatUSD(currentPrice);
         row.appendChild(priceCell);
 
         var btcCell = document.createElement("td");
@@ -525,7 +537,7 @@
         row.appendChild(btcCell);
 
         var valueCell = document.createElement("td");
-        valueCell.textContent = parseFloat(value).toFixed(2);
+        valueCell.textContent = formatUSD(value);
         valueCell.title = "USD value of Bitcoin at end of the period.";
         row.appendChild(valueCell);
 
@@ -535,7 +547,7 @@
         row.appendChild(cagrCell);
 
         var monthlyCell = document.createElement("td");
-        monthlyCell.textContent = monthlyPurchase;
+        monthlyCell.textContent = formatUSD(monthlyPurchase);
         monthlyCell.title = "Monthly purchase amount for this year.";
         row.appendChild(monthlyCell);
 
@@ -578,7 +590,7 @@
 
         addSummaryRow(
           "Total Invested (USD):",
-          totalInvested.toFixed(2),
+          formatUSD(totalInvested),
           "The total amount invested (initial allocation + monthly contributions)."
         );
         addSummaryRow(
@@ -588,22 +600,22 @@
         );
         addSummaryRow(
           "Final Bitcoin Price (USD):",
-          finalPrice.toFixed(2),
+          formatUSD(finalPrice),
           "The estimated Bitcoin price at the end of the accumulation period."
         );
         addSummaryRow(
           "Final Investment Value (USD):",
-          finalInvestmentValue.toFixed(2),
+          formatUSD(finalInvestmentValue),
           "The total USD value of your Bitcoin holdings at the end of accumulation."
         );
         addSummaryRow(
           "Net Gain (USD):",
-          netGain.toFixed(2),
+          formatUSD(netGain),
           "The profit in USD (final value minus total invested)."
         );
         addSummaryRow(
           "Percentage Gain (%):",
-          percentageGain.toFixed(2),
+          percentageGain.toFixed(0),
           "The overall return on your investment expressed as a percentage."
         );
 
@@ -612,18 +624,21 @@
       }
 
       // Simulates the retirement phase over the specified number of years.
+      // Also tracks the Bitcoin price, starting with startingBitcoinPrice.
       function simulateRetirement(
         startPortfolio,
         initialMonthlyPension,
         pensionChange,
         startingRetirementCAGR,
         yearlyCAGRChange,
-        retirementYears
+        retirementYears,
+        startingBitcoinPrice
       ) {
         var portfolio = startPortfolio;
         var monthlyPension = initialMonthlyPension;
         var retirementResults = [];
         var currentRetirementCAGR = startingRetirementCAGR;
+        var bitcoinPrice = startingBitcoinPrice;
 
         for (var year = 1; year <= retirementYears; year++) {
           var startingPortfolio = portfolio;
@@ -646,15 +661,18 @@
             totalWithdrawal: totalWithdrawal,
             annualGrowth: annualGrowth,
             endingPortfolio: endingPortfolio,
+            bitcoinPrice: bitcoinPrice,
           });
           monthlyPension = monthlyPension * (1 + pensionChange / 100);
           currentRetirementCAGR =
             currentRetirementCAGR * (1 - yearlyCAGRChange / 100);
+          bitcoinPrice = bitcoinPrice * (1 + thisYearCAGR / 100); // Update Bitcoin price
         }
         return retirementResults;
       }
 
       // Creates the retirement projection table.
+      // A new column "Bitcoin Price (USD)" is included.
       function createRetirementTable(data) {
         var retirementDiv = document.getElementById("retirementSummary");
 
@@ -671,7 +689,7 @@
           warningMsg.textContent =
             "Warning: Your portfolio is projected to run out after Year " +
             runOutYear +
-            ".";
+            ". Consider increasing your initial allocation and/or monthly contributions during the accumulation phase.";
           warningMsg.className = "warning";
           retirementDiv.appendChild(warningMsg);
         }
@@ -683,8 +701,13 @@
         var table = document.createElement("table");
         var thead = document.createElement("thead");
         var headerRow = document.createElement("tr");
+        // Define headers, including the new "Bitcoin Price (USD)" column.
         var headers = [
           { text: "Year", tooltip: "Retirement Year (1 to N)" },
+          {
+            text: "Bitcoin Price (USD)",
+            tooltip: "Bitcoin price at the start of the retirement year.",
+          },
           {
             text: "Starting Portfolio (USD)",
             tooltip: "Portfolio value at the start of the retirement year.",
@@ -707,7 +730,7 @@
           },
           {
             text: "Ending Portfolio (USD)",
-            tooltip: "Portfolio value at the end of the year.",
+            tooltip: "Portfolio value at the end of the retirement year.",
           },
         ];
         headers.forEach(function (headerObj) {
@@ -727,25 +750,31 @@
           tdYear.textContent = rowData.year;
           tr.appendChild(tdYear);
 
+          var tdBitcoinPrice = document.createElement("td");
+          tdBitcoinPrice.textContent = formatUSD(rowData.bitcoinPrice);
+          tdBitcoinPrice.title =
+            "Bitcoin price at the start of this retirement year.";
+          tr.appendChild(tdBitcoinPrice);
+
           var tdStarting = document.createElement("td");
-          tdStarting.textContent = rowData.startingPortfolio.toFixed(2);
+          tdStarting.textContent = formatUSD(rowData.startingPortfolio);
           tr.appendChild(tdStarting);
 
           var tdCAGR = document.createElement("td");
-          tdCAGR.textContent = rowData.currentCAGR.toFixed(2);
+          tdCAGR.textContent = rowData.currentCAGR.toFixed(0);
           tdCAGR.title = "Effective annual growth rate for this year.";
           tr.appendChild(tdCAGR);
 
           var tdMonthly = document.createElement("td");
-          tdMonthly.textContent = rowData.monthlyPension.toFixed(2);
+          tdMonthly.textContent = formatUSD(rowData.monthlyPension);
           tr.appendChild(tdMonthly);
 
           var tdWithdrawal = document.createElement("td");
-          tdWithdrawal.textContent = rowData.totalWithdrawal.toFixed(2);
+          tdWithdrawal.textContent = formatUSD(rowData.totalWithdrawal);
           tr.appendChild(tdWithdrawal);
 
           var tdGrowth = document.createElement("td");
-          tdGrowth.textContent = rowData.annualGrowth.toFixed(2);
+          tdGrowth.textContent = formatUSD(rowData.annualGrowth);
           if (rowData.annualGrowth < 0) {
             tdGrowth.style.color = "red";
             tdGrowth.style.fontWeight = "bold";
@@ -753,7 +782,7 @@
           tr.appendChild(tdGrowth);
 
           var tdEnding = document.createElement("td");
-          tdEnding.textContent = rowData.endingPortfolio.toFixed(2);
+          tdEnding.textContent = formatUSD(rowData.endingPortfolio);
           if (rowData.endingPortfolio < 0) {
             tdEnding.style.color = "red";
             tdEnding.style.fontWeight = "bold";
@@ -799,7 +828,13 @@
                 beginAtZero: true,
                 ticks: {
                   callback: function (value) {
-                    return "$" + value;
+                    return (
+                      "$" +
+                      value.toLocaleString("en-US", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })
+                    );
                   },
                 },
               },
@@ -808,7 +843,13 @@
               tooltip: {
                 callbacks: {
                   label: function (context) {
-                    return "$" + context.parsed.y;
+                    return (
+                      "$" +
+                      context.parsed.y.toLocaleString("en-US", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })
+                    );
                   },
                 },
               },
