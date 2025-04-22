@@ -852,7 +852,6 @@
       function createRetirementTable(data) {
         var div = document.getElementById("retirementSummary");
 
-        /* Check for run‑out */
         var runOut = data.find((d) => d.endingPortfolio <= 0);
         if (runOut) {
           var warn = document.createElement("p");
@@ -871,7 +870,6 @@
         var table = document.createElement("table");
         table.classList.add("retirement-table");
 
-        /* Header */
         var thead = document.createElement("thead");
         var hdrRow = document.createElement("tr");
         [
@@ -882,6 +880,7 @@
           "Monthly Pension (" + currentCurrency + ")",
           "Total Annual Withdrawal (" + currentCurrency + ")",
           "Annual Growth (" + currentCurrency + ")",
+          "Withdrawal/Growth (%)",
           "Ending Portfolio (" + currentCurrency + ")",
         ].forEach(function (txt) {
           var th = document.createElement("th");
@@ -891,7 +890,6 @@
         thead.appendChild(hdrRow);
         table.appendChild(thead);
 
-        /* Body */
         var tbody = document.createElement("tbody");
         data.forEach(function (d) {
           var tr = document.createElement("tr");
@@ -911,15 +909,21 @@
               ? d.bitcoinPrice / 4
               : d.bitcoinPrice;
           var mcapT = Math.floor((priceUSD * 21000000) / 1e12);
-          td(formatCurrency(d.bitcoinPrice) + " (" + mcapT + " T USD)");
+          td(
+            formatCurrency(d.bitcoinPrice) + " (" + mcapT + "\u00a0T\u00a0USD)"
+          );
 
           td(formatCurrency(d.startingPortfolio));
           td(d.currentCAGR.toFixed(0));
           td(formatCurrency(d.monthlyPension));
           td(formatCurrency(d.totalWithdrawal));
+          td(formatCurrency(d.annualGrowth));
 
-          var growthCell = formatCurrency(d.annualGrowth);
-          td(growthCell);
+          var ratio =
+            d.annualGrowth !== 0
+              ? ((d.totalWithdrawal / d.annualGrowth) * 100).toFixed(1) + "%"
+              : "-";
+          td(ratio);
 
           var endCell = document.createElement("td");
           endCell.textContent = formatCurrency(d.endingPortfolio);
