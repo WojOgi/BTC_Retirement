@@ -3,21 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <title>Bitcoin Retirement Calculator</title>
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
-      /* ——— General layout & typography ——— */
+      /* ——— basic styling ——— */
       body {
         font-family: Arial, sans-serif;
         margin: 20px;
         line-height: 1.6;
-        background-color: #fafafa;
+        background: #fafafa;
         color: #333;
       }
-
-      /* Flex container for inputs + summary */
       .input-summary-container {
         display: flex;
         gap: 20px;
@@ -29,8 +24,6 @@
         flex: 1;
         min-width: 300px;
       }
-
-      /* Form controls */
       select,
       input,
       button.update-button {
@@ -43,8 +36,8 @@
       button.update-button {
         width: auto;
         cursor: pointer;
-        background-color: #4caf50;
-        color: white;
+        background: #4caf50;
+        color: #fff;
       }
       label {
         display: inline-block;
@@ -52,8 +45,6 @@
         vertical-align: top;
         margin-bottom: 5px;
       }
-
-      /* Tooltip buttons */
       .tooltip-button {
         margin-left: 5px;
         color: darkorange;
@@ -63,12 +54,9 @@
         border: none;
         padding: 0;
       }
-      .tooltip-button:focus {
-        outline: none;
-      }
       .custom-tooltip {
         position: absolute;
-        background-color: #333;
+        background: #333;
         color: #fff;
         padding: 5px 10px;
         border-radius: 4px;
@@ -77,27 +65,23 @@
         max-width: 150px;
         word-wrap: break-word;
       }
-
-      /* Generic buttons */
       button {
         padding: 10px 20px;
         margin-top: 10px;
         border: none;
         border-radius: 4px;
-        background-color: #4caf50;
-        color: white;
+        background: #4caf50;
+        color: #fff;
         cursor: pointer;
       }
       button:hover {
-        background-color: #45a049;
+        background: #45a049;
       }
-
-      /* Tables */
       table {
         border-collapse: collapse;
         margin-top: 20px;
         width: 100%;
-        background-color: #fff;
+        background: #fff;
       }
       th,
       td {
@@ -106,7 +90,7 @@
         text-align: center;
       }
       th {
-        background-color: #f0f0f0;
+        background: #f0f0f0;
       }
       .summary-table {
         max-width: 500px;
@@ -119,8 +103,6 @@
         text-align: left;
         padding: 6px;
       }
-
-      /* Misc */
       .hint {
         font-size: 0.9em;
         color: #555;
@@ -139,14 +121,19 @@
       }
       #chartContainer {
         margin-top: 20px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
       }
-      #retirementChart {
+      #chartContainer canvas {
+        flex: 1 1 350px;
+        max-width: 100%;
         height: 200px !important;
       }
       #explanation {
         margin-bottom: 20px;
         padding: 10px;
-        background-color: #e9f5ff;
+        background: #e9f5ff;
         border: 1px solid #b3d7ff;
         border-radius: 4px;
       }
@@ -156,76 +143,25 @@
         margin-left: 10px;
       }
     </style>
-
     <script>
-      /* ——— Global currency & FX helpers ——— */
+      /* ===== 1. FX helpers & price fetch ===== */
       let currentCurrency = "USD";
-      const fxRates = { USD: 1 }; // USD → currency; filled at runtime
+      const fxRates = { USD: 1 };
 
-      /* refresh timestamp helper */
-      function stampFx() {
-        fxRates.__updated = new Date().toLocaleString(
-          getLocaleForCurrency("USD")
-        );
-        document.getElementById("fxStamp").textContent =
-          "FX updated: " + fxRates.__updated;
+      function getLocaleForCurrency(c) {
+        return c === "USD"
+          ? "en-US"
+          : c === "EUR"
+          ? "de-DE"
+          : c === "PLN"
+          ? "pl-PL"
+          : "en-US";
       }
-
-      /* robust FX fetch with fallback endpoints */
-      async function updateFxRates() {
-        const fallback = { USD: 1, EUR: 0.93, PLN: 4.0 };
-
-        const assignRates = (obj) => {
-          fxRates.USD = 1;
-          fxRates.EUR = obj.EUR;
-          fxRates.PLN = obj.PLN;
-          stampFx();
-        };
-
-        /* 1️⃣ exchangerate.host */
-        try {
-          const r = await fetch(
-            "https://api.exchangerate.host/latest?base=USD&symbols=EUR,PLN"
-          );
-          if (!r.ok) throw new Error("host API error " + r.status);
-          const d = await r.json();
-          assignRates(d.rates);
-          return;
-        } catch (e) {
-          console.warn("[FX] exchangerate.host failed:", e);
-        }
-
-        /* 2️⃣ open.er-api.com */
-        try {
-          const r = await fetch("https://open.er-api.com/v6/latest/USD");
-          if (!r.ok) throw new Error("er-api error " + r.status);
-          const d = await r.json();
-          assignRates({ EUR: d.rates.EUR, PLN: d.rates.PLN });
-          return;
-        } catch (e) {
-          console.warn("[FX] er-api failed:", e);
-        }
-
-        /* 3️⃣ hard‑coded fallback */
-        if (!fxRates.EUR || !fxRates.PLN) Object.assign(fxRates, fallback);
-        stampFx();
-      }
-
-      function getLocaleForCurrency(cur) {
-        if (cur === "USD") return "en-US";
-        if (cur === "EUR") return "de-DE";
-        if (cur === "PLN") return "pl-PL";
-        return "en-US";
-      }
-
-      /* Conversion helpers */
-      const convertFromUsd = (amtUsd, toCur) => amtUsd * (fxRates[toCur] ?? 1);
-      const convertToUsd = (amtLocal, cur) => amtLocal / (fxRates[cur] ?? 1);
-
-      function formatCurrency(num) {
-        const locale = getLocaleForCurrency(currentCurrency);
+      const convertFromUsd = (a, cur) => a * (fxRates[cur] ?? 1);
+      const convertToUsd = (a, cur) => a / (fxRates[cur] ?? 1);
+      function formatCurrency(n) {
         return (
-          parseFloat(num).toLocaleString(locale, {
+          parseFloat(n).toLocaleString(getLocaleForCurrency(currentCurrency), {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
           }) +
@@ -234,673 +170,332 @@
         );
       }
 
-      function updateCurrencyLabels() {
-        document.querySelectorAll(".currency-label").forEach((span) => {
-          span.innerText = currentCurrency;
-        });
+      function stampFx() {
+        fxRates.__updated = new Date().toLocaleString(
+          getLocaleForCurrency("USD")
+        );
+        document.getElementById("fxStamp").textContent =
+          "FX updated: " + fxRates.__updated;
       }
 
-      /* Fetch BTC spot price in USD, convert client‑side */
+      async function updateFxRates() {
+        const fallback = { USD: 1, EUR: 0.93, PLN: 4 };
+        const setRates = (o) => {
+          fxRates.USD = 1;
+          fxRates.EUR = o.EUR;
+          fxRates.PLN = o.PLN;
+          stampFx();
+        };
+        try {
+          const r = await fetch(
+            "https://api.exchangerate.host/latest?base=USD&symbols=EUR,PLN"
+          );
+          if (r.ok) {
+            setRates((await r.json()).rates);
+            return;
+          }
+        } catch {}
+        try {
+          const r = await fetch("https://open.er-api.com/v6/latest/USD");
+          if (r.ok) {
+            const d = await r.json();
+            setRates({ EUR: d.rates.EUR, PLN: d.rates.PLN });
+            return;
+          }
+        } catch {}
+        Object.assign(fxRates, fallback);
+        stampFx();
+      }
+
       async function updatePrice() {
         try {
-          /* ensure fresh FX first */
-          if (!fxRates.EUR || !fxRates.PLN) await updateFxRates();
-
-          const cb = await fetch(
+          if (!fxRates.EUR) await updateFxRates();
+          const r = await fetch(
             "https://api.coinbase.com/v2/prices/spot?currency=USD"
           );
-          if (!cb.ok) throw new Error("Coinbase error " + cb.status);
-          const btcUsd = parseFloat((await cb.json()).data.amount);
-
-          const finalPrice = Math.round(
+          if (!r.ok) throw new Error();
+          const priceUsd = parseFloat((await r.json()).data.amount);
+          const price =
             currentCurrency === "USD"
-              ? btcUsd
-              : convertFromUsd(btcUsd, currentCurrency)
-          );
-          document.getElementById("currentPrice").value = finalPrice;
-        } catch (err) {
-          console.error("[Price] fetch failed:", err);
-          // leave previous price untouched
+              ? priceUsd
+              : convertFromUsd(priceUsd, currentCurrency);
+          const inp = document.getElementById("currentPrice");
+          if (inp) inp.value = Math.round(price);
+        } catch (e) {
+          console.error(e);
         }
       }
+      function updateCurrencyLabels() {
+        document
+          .querySelectorAll(".currency-label")
+          .forEach((el) => (el.textContent = currentCurrency));
+      }
 
-      /* ——— DOM ready ——— */
+      /* ===== 2. DOM ready ===== */
       document.addEventListener("DOMContentLoaded", async () => {
-        const currencySelect = document.getElementById("currencySelect");
-
+        const curSel = document.getElementById("currencySelect");
         await updateFxRates();
-        currentCurrency = currencySelect.value;
+        currentCurrency = curSel.value;
         updateCurrencyLabels();
         await updatePrice();
 
-        /* disallow negative currency inputs */
-        document.querySelectorAll(".usd-input").forEach((inpt) => {
-          inpt.addEventListener("input", function () {
+        document.querySelectorAll(".usd-input").forEach((i) =>
+          i.addEventListener("input", function () {
             if (this.value < 0) this.value = 0;
-          });
-        });
-
-        currencySelect.addEventListener("change", async function () {
-          currentCurrency = this.value;
+          })
+        );
+        curSel.addEventListener("change", async () => {
+          currentCurrency = curSel.value;
           updateCurrencyLabels();
           await updatePrice();
         });
-
         document
           .getElementById("updatePriceButton")
           .addEventListener("click", async () => {
             await updateFxRates();
             await updatePrice();
           });
-
-        /* mobile‑friendly tooltips */
-        document.querySelectorAll(".tooltip-button").forEach((btn) => {
-          btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            const old = document.querySelector(".custom-tooltip");
-            if (old) old.remove();
-
-            const tip = document.createElement("div");
-            tip.className = "custom-tooltip";
-            tip.innerText = btn.getAttribute("title");
-            document.body.appendChild(tip);
-
-            const rect = btn.getBoundingClientRect();
-            tip.style.top = rect.bottom + window.scrollY + 5 + "px";
-            tip.style.left = rect.left + window.scrollX + "px";
-
-            document.addEventListener("click", function handler() {
-              tip.remove();
-              document.removeEventListener("click", handler);
-            });
-          });
-        });
       });
-    </script>
-  </head>
 
-  <body>
-    <h1>Bitcoin Retirement Calculator</h1>
-
-    <div id="explanation">
-      This app projects the growth of your Bitcoin holdings and simulates
-      retirement withdrawals – dynamically converting between
-      <span class="currency-label">USD</span>, EUR and PLN using live FX rates.
-    </div>
-
-    <!-- ——— Currency selection ——— -->
-    <div>
-      <label for="currencySelect">Select Currency:</label>
-      <select id="currencySelect">
-        <option value="USD" selected>USD</option>
-        <option value="EUR">EUR</option>
-        <option value="PLN">PLN</option>
-      </select>
-      <button type="button" id="updatePriceButton" class="update-button">
-        Update Price
-      </button>
-      <span id="fxStamp"></span>
-    </div>
-
-    <!-- ——— Input + summary flex container ——— -->
-    <div class="input-summary-container">
-      <!-- ========== INPUT AREA ========== -->
-      <div id="inputArea">
-        <!-- Accumulation inputs -->
-        <div>
-          <label for="currentPrice">
-            Current Bitcoin Price (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Fetched from Coinbase spot API; converted with live FX rate."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="currentPrice"
-            placeholder="e.g. 95000"
-            step="any"
-            min="1"
-          />
-        </div>
-
-        <div>
-          <label for="expectedCAGR">
-            Expected Future CAGR (%)
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Historical 5‑yr CAGR ≈56%, 10‑yr ≈82%."
-            >
-              ?
-            </button>
-            <span class="hint">(hist 5‑yr 56%, 10‑yr 82%)</span>
-          </label>
-          <input
-            type="number"
-            id="expectedCAGR"
-            placeholder="e.g. 35"
-            step="any"
-            value="35"
-            min="-100"
-            max="200"
-          />
-        </div>
-
-        <div>
-          <label for="yearlyCAGRChange">
-            Yearly CAGR Change (relative %)
-            <button
-              type="button"
-              class="tooltip-button"
-              title="5 means the CAGR is reduced by 5 % each year."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="yearlyCAGRChange"
-            placeholder="e.g. 5"
-            step="any"
-            value="5"
-            min="0"
-            max="100"
-          />
-        </div>
-
-        <div>
-          <label for="initialAllocation">
-            Initial Allocation (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Lump‑sum investment today."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="initialAllocation"
-            placeholder="e.g. 10000"
-            step="any"
-            value="10000"
-            min="0"
-          />
-        </div>
-
-        <div>
-          <label for="monthlyPurchase">
-            Monthly Purchase (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Recurring monthly contribution."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="monthlyPurchase"
-            placeholder="e.g. 1000"
-            step="any"
-            value="1000"
-            min="0"
-          />
-        </div>
-
-        <div>
-          <label for="monthlyPurchaseChange">
-            Yearly Change in Monthly Purchase (%):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="0 = no change, positive = increase, negative = decrease."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="monthlyPurchaseChange"
-            placeholder="e.g. 0"
-            step="any"
-            value="0"
-            min="-100"
-            max="100"
-          />
-        </div>
-
-        <div>
-          <label for="years">
-            Number of Years to Invest:
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Total accumulation period. Enter 0 to skip straight to retirement."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="years"
-            placeholder="e.g. 5"
-            step="1"
-            value="5"
-            min="0"
-            max="100"
-          />
-        </div>
-
-        <!-- Retirement inputs -->
-        <div>
-          <label for="desiredPension">
-            Desired Monthly Pension (<span class="currency-label">USD</span>):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Monthly withdrawal during retirement."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            class="usd-input"
-            id="desiredPension"
-            placeholder="e.g. 2000"
-            step="any"
-            value="2000"
-            min="0"
-          />
-        </div>
-
-        <div>
-          <label for="pensionChange">
-            Yearly Change in Monthly Pension (%):
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Inflation adjustment or lifestyle change."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="pensionChange"
-            placeholder="e.g. 2"
-            step="any"
-            value="2"
-            min="-100"
-            max="100"
-          />
-        </div>
-
-        <div>
-          <label for="retirementYears">
-            Number of Retirement Years:
-            <button
-              type="button"
-              class="tooltip-button"
-              title="Projection horizon for withdrawals."
-            >
-              ?
-            </button>
-          </label>
-          <input
-            type="number"
-            id="retirementYears"
-            placeholder="e.g. 15"
-            step="1"
-            value="15"
-            min="1"
-            max="100"
-          />
-        </div>
-
-        <button onclick="calculate()">Calculate</button>
-      </div>
-
-      <!-- ========== SUMMARY AREA ========== -->
-      <div id="summary"></div>
-    </div>
-
-    <!-- Accumulation breakdown table -->
-    <div id="result">
-      <h2>Yearly Investment Breakdown</h2>
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th title="Year 0 = initial lump sum">Year</th>
-            <th>
-              Bitcoin Price (<span class="currency-label">USD</span>) (Mkcap)
-            </th>
-            <th>Bitcoin Purchased (BTC)</th>
-            <th>Value (<span class="currency-label">USD</span>)</th>
-            <th>Current CAGR (%)</th>
-            <th>Monthly Purchase (<span class="currency-label">USD</span>)</th>
-          </tr>
-        </thead>
-        <tbody id="resultBody"></tbody>
-      </table>
-    </div>
-
-    <!-- Retirement projection -->
-    <div id="retirementSummary"></div>
-
-    <!-- ——— Main calculator logic ——— -->
-    <script>
+      /* ===== 3. Core calculator ===== */
       function calculate() {
-        /* Clear previous output */
+        /* clear old output */
         document.getElementById("resultBody").innerHTML = "";
         document.getElementById("summary").innerHTML = "";
         document.getElementById("retirementSummary").innerHTML = "";
 
-        /* Create chart placeholder */
-        const retirementDiv = document.getElementById("retirementSummary");
-        const chartDiv = document.createElement("div");
-        chartDiv.id = "chartContainer";
-        const canvas = document.createElement("canvas");
-        canvas.id = "retirementChart";
-        chartDiv.appendChild(canvas);
-        retirementDiv.appendChild(chartDiv);
+        /* create chart container */
+        const rDiv = document.getElementById("retirementSummary");
+        const chCont = document.createElement("div");
+        chCont.id = "chartContainer";
+        const cv1 = document.createElement("canvas");
+        cv1.id = "retirementChart";
+        const cv2 = document.createElement("canvas");
+        cv2.id = "btcChart";
+        chCont.appendChild(cv1);
+        chCont.appendChild(cv2);
+        rDiv.appendChild(chCont);
 
-        /* Gather inputs */
-        const currentPriceInput = parseFloat(
-          document.getElementById("currentPrice").value
-        );
-        const expectedCAGR = parseFloat(
-          document.getElementById("expectedCAGR").value
-        );
-        const yearlyCAGRChange = parseFloat(
-          document.getElementById("yearlyCAGRChange").value
-        );
-        const initialAllocation = parseFloat(
-          document.getElementById("initialAllocation").value
-        );
-        const monthlyPurchase = parseFloat(
-          document.getElementById("monthlyPurchase").value
-        );
-        const monthlyPurchaseChange = parseFloat(
-          document.getElementById("monthlyPurchaseChange").value
-        );
-        const years = parseInt(document.getElementById("years").value, 10);
-
-        /* Basic validation */
+        /* gather inputs */
+        const getF = (id) => parseFloat(document.getElementById(id).value);
+        const getI = (id) => parseInt(document.getElementById(id).value, 10);
+        const [
+          currentPrice,
+          expectedCAGR,
+          yearlyCAGRChange,
+          initialAllocation,
+          monthlyPurchase,
+          monthlyPurchaseChange,
+          years,
+        ] = [
+          "currentPrice",
+          "expectedCAGR",
+          "yearlyCAGRChange",
+          "initialAllocation",
+          "monthlyPurchase",
+          "monthlyPurchaseChange",
+          "years",
+        ]
+          .map((id) => document.getElementById(id).value)
+          .map(Number);
         if (
           [
-            currentPriceInput,
+            currentPrice,
             expectedCAGR,
             yearlyCAGRChange,
             initialAllocation,
             monthlyPurchase,
             monthlyPurchaseChange,
             years,
-          ].some((x) => isNaN(x))
+          ].some(isNaN)
         ) {
-          alert("Please fill in all accumulation fields with valid numbers.");
+          alert("Please fill the accumulation inputs");
           return;
         }
 
-        /* Accumulation simulation */
-        let price = currentPriceInput;
-        let currentCAGR = expectedCAGR;
-        let currentMonthlyPurchase = monthlyPurchase;
-        let totalBTC = 0;
-        let totalInvested = 0;
-
-        /* Year 0 (initial lump sum) */
-        const btcPurchased0 = initialAllocation / price;
-        const value0 = btcPurchased0 * price;
-        totalBTC += btcPurchased0;
+        /* ----- accumulation loop ----- */
+        let price = currentPrice,
+          cCAGR = expectedCAGR,
+          curMonthly = monthlyPurchase,
+          totalBTC = 0,
+          totalInvested = 0;
+        const btc0 = initialAllocation / price;
+        totalBTC += btc0;
         totalInvested += initialAllocation;
         addRow(
           0,
           price,
-          btcPurchased0,
-          value0,
+          btc0,
+          btc0 * price,
           "-",
           "-",
-          "Year 0 uses your initial allocation at the current price."
+          "Year 0 uses initial lump sum"
         );
-
-        for (let i = 1; i <= years; i++) {
-          const startPrice = price;
-          const endPrice = startPrice * (1 + currentCAGR / 100);
-          const avgPrice = (startPrice + endPrice) / 2;
-          const investYear = currentMonthlyPurchase * 12;
-          const btcYear = investYear / avgPrice;
-          const valueYear = btcYear * endPrice;
-
-          totalBTC += btcYear;
-          totalInvested += investYear;
-
+        for (let y = 1; y <= years; y++) {
+          const start = price,
+            end = start * (1 + cCAGR / 100),
+            avg = (start + end) / 2,
+            invest = curMonthly * 12,
+            btc = invest / avg,
+            val = btc * end;
+          totalBTC += btc;
+          totalInvested += invest;
           addRow(
-            i,
-            startPrice,
-            btcYear,
-            valueYear,
-            currentCAGR.toFixed(2),
-            currentMonthlyPurchase,
-            "Year " + i + ": monthly purchases use the year’s average price."
+            y,
+            start,
+            btc,
+            val,
+            cCAGR.toFixed(2),
+            curMonthly,
+            "Year " + y + ": monthly purchases use avg price"
           );
-
-          /* update for next loop */
-          price = endPrice;
-          currentCAGR *= 1 - yearlyCAGRChange / 100;
-          currentMonthlyPurchase *= 1 + monthlyPurchaseChange / 100;
+          price = end;
+          cCAGR *= 1 - yearlyCAGRChange / 100;
+          curMonthly *= 1 + monthlyPurchaseChange / 100;
         }
-
-        /* Summary */
-        const finalPrice = price;
-        const finalInvestmentValue = totalBTC * finalPrice;
-        const netGain = finalInvestmentValue - totalInvested;
-        const pctGain = (netGain / totalInvested) * 100;
+        const finalValue = totalBTC * price,
+          netGain = finalValue - totalInvested,
+          pctGain = (netGain / totalInvested) * 100;
         createSummaryTable(
           totalInvested,
           totalBTC,
-          finalPrice,
-          finalInvestmentValue,
+          price,
+          finalValue,
           netGain,
           pctGain
         );
 
-        /* Retirement inputs */
-        const desiredPension = parseFloat(
-          document.getElementById("desiredPension").value
-        );
-        const pensionChange = parseFloat(
-          document.getElementById("pensionChange").value
-        );
-        const retirementYears = parseInt(
-          document.getElementById("retirementYears").value,
-          10
-        );
-        if (
-          [desiredPension, pensionChange, retirementYears].some((x) => isNaN(x))
-        ) {
-          alert("Please fill in all retirement fields with valid numbers.");
+        /* retirement inputs */
+        const desiredPension = getF("desiredPension"),
+          pensionChange = getF("pensionChange"),
+          retYears = getI("retirementYears");
+        if ([desiredPension, pensionChange, retYears].some(isNaN)) {
+          alert("Fill retirement inputs");
           return;
         }
 
-        const retirementData = simulateRetirement(
-          finalInvestmentValue,
+        const retireData = simulateRetirement(
+          totalBTC, // start BTC stack
+          price, // BTC price at retirement start
           desiredPension,
           pensionChange,
-          currentCAGR,
+          cCAGR, // CAGR enters retirement already decayed
           yearlyCAGRChange,
-          retirementYears,
-          finalPrice
+          retYears
         );
-        createRetirementTable(retirementData);
-        createRetirementChart(retirementData);
+        createRetirementTable(retireData);
+        createRetirementCharts(retireData);
       }
+      window.calculate = calculate; /* expose for onclick */
 
-      /* ——— Helpers ——— */
-      function addRow(
-        year,
-        currentPrice,
-        btcPurchased,
-        value,
-        cagr,
-        monthlyPurchase,
-        tooltipText
-      ) {
-        const tbody = document.getElementById("resultBody");
-        const row = document.createElement("tr");
-
-        const yearCell = document.createElement("td");
-        yearCell.textContent = year;
-        row.appendChild(yearCell);
-
-        /* Market cap calc using live FX */
-        const priceUsd = convertToUsd(currentPrice, currentCurrency);
-        const mcapT = Math.floor((priceUsd * 21_000_000) / 1e12);
-
-        const priceCell = document.createElement("td");
-        priceCell.textContent =
-          formatCurrency(currentPrice) + " (" + mcapT + " T USD)";
-        row.appendChild(priceCell);
-
-        const btcCell = document.createElement("td");
-        btcCell.textContent = btcPurchased.toFixed(8);
-        row.appendChild(btcCell);
-
-        const valueCell = document.createElement("td");
-        valueCell.textContent = formatCurrency(value);
-        row.appendChild(valueCell);
-
-        const cagrCell = document.createElement("td");
-        cagrCell.textContent = cagr;
-        row.appendChild(cagrCell);
-
-        const monthlyCell = document.createElement("td");
-        monthlyCell.textContent =
-          typeof monthlyPurchase === "number"
-            ? formatCurrency(monthlyPurchase)
-            : monthlyPurchase;
-        row.appendChild(monthlyCell);
-
-        if (tooltipText) row.title = tooltipText;
-        tbody.appendChild(row);
-      }
-
-      function createSummaryTable(
-        invested,
-        totalBTC,
-        finalPrice,
-        finalValue,
-        netGain,
-        pctGain
-      ) {
-        const sumDiv = document.getElementById("summary");
-        const header = document.createElement("h2");
-        header.textContent = "Accumulation Summary";
-        sumDiv.appendChild(header);
-
-        const tbl = document.createElement("table");
-        tbl.classList.add("summary-table");
-        const tbody = document.createElement("tbody");
-
-        const add = (d, v) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = "<td>" + d + "</td><td>" + v + "</td>";
-          tbody.appendChild(tr);
+      /* ===== 4. Helper functions ===== */
+      function addRow(year, price, btc, val, cagr, monthly, tips) {
+        const tb = document.getElementById("resultBody"),
+          tr = document.createElement("tr");
+        const put = (v) => {
+          const td = document.createElement("td");
+          td.textContent = v;
+          tr.appendChild(td);
         };
-
-        add("Total Invested:", formatCurrency(invested));
-        add("Total Bitcoin Purchased (BTC):", totalBTC.toFixed(8));
-        add("Final Bitcoin Price:", formatCurrency(finalPrice));
-        add("Final Investment Value:", formatCurrency(finalValue));
-        add("Net Gain:", formatCurrency(netGain));
-        add("Percentage Gain (%):", pctGain.toFixed(0));
-
-        tbl.appendChild(tbody);
-        sumDiv.appendChild(tbl);
+        put(year);
+        const mcap = Math.floor(
+          (convertToUsd(price, currentCurrency) * 21e6) / 1e12
+        );
+        put(formatCurrency(price) + " (" + mcap + " T USD)");
+        put(btc.toFixed(8));
+        put(formatCurrency(val));
+        put(cagr);
+        put(typeof monthly === "number" ? formatCurrency(monthly) : monthly);
+        tr.title = tips;
+        tb.appendChild(tr);
       }
 
-      /* ----- UPDATED FUNCTION ----- */
+      function createSummaryTable(inv, btc, price, val, net, pct) {
+        const d = document.getElementById("summary");
+        const h = document.createElement("h2");
+        h.textContent = "Accumulation Summary";
+        d.appendChild(h);
+        const t = document.createElement("table");
+        t.className = "summary-table";
+        const b = document.createElement("tbody");
+        const row = (l, v) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${l}</td><td>${v}</td>`;
+          b.appendChild(tr);
+        };
+        row("Total Invested:", formatCurrency(inv));
+        row("Total Bitcoin Purchased (BTC):", btc.toFixed(8));
+        row("Final Bitcoin Price:", formatCurrency(price));
+        row("Final Investment Value:", formatCurrency(val));
+        row("Net Gain:", formatCurrency(net));
+        row("Percentage Gain (%):", pct.toFixed(0));
+        t.appendChild(b);
+        d.appendChild(t);
+      }
+
+      /* ===== 5. NEW retirement simulation that actually sells BTC ===== */
       function simulateRetirement(
-        startPortfolio,
-        initialMonthly,
-        pensionChange,
-        startCAGR,
-        yearlyCAGRChange,
-        retirementYears,
-        startBtcPrice
+        startBTC, // BTC stack at retirement start
+        btcPriceStart, // BTC price at retirement start
+        initialMonthly, // starting pension
+        pensionChange, // % change per year
+        startCAGR, // CAGR in year 1
+        yearlyCAGRChange, // CAGR decay
+        retirementYears
       ) {
-        let port = startPortfolio;
+        let btcHold = startBTC;
+        let price = btcPriceStart;
         let monthly = initialMonthly;
+        let CAGR = startCAGR;
         const out = [];
-        let thisCAGR = startCAGR;
-        let btcPrice = startBtcPrice;
 
         for (let yr = 1; yr <= retirementYears; yr++) {
-          const startPort = port;
-          const btcPriceEnd = btcPrice * (1 + thisCAGR / 100);
-          const mRate = Math.pow(1 + thisCAGR / 100, 1 / 12) - 1;
+          const priceEnd = price * (1 + CAGR / 100);
+          const avgPrice = (price + priceEnd) / 2; // rough average price
+          const btcSold = (monthly * 12) / avgPrice; // coins required for cash
+          const startPort = btcHold * price;
 
-          for (let m = 0; m < 12; m++) port = port * (1 + mRate) - monthly;
-
-          const withdrawal = monthly * 12;
-          const endPort = port;
-          const remainingBTC = endPort / btcPriceEnd;
+          btcHold = Math.max(0, btcHold - btcSold); // reduce holdings
+          const endPort = btcHold * priceEnd;
 
           out.push({
             year: yr,
-            bitcoinPrice: btcPrice,
+            bitcoinPrice: price,
             startingPortfolio: startPort,
-            currentCAGR: thisCAGR,
+            currentCAGR: CAGR,
             monthlyPension: monthly,
-            totalWithdrawal: withdrawal,
-            annualGrowth: endPort - startPort + withdrawal,
+            totalWithdrawal: monthly * 12,
+            annualGrowth: endPort - startPort + monthly * 12,
             endingPortfolio: endPort,
-            remainingBTC: remainingBTC,
+            remainingBTC: btcHold,
           });
 
-          /* update for next year */
+          /* advance one year */
           monthly *= 1 + pensionChange / 100;
-          thisCAGR *= 1 - yearlyCAGRChange / 100;
-          btcPrice = btcPriceEnd; // next year's starting price
+          CAGR *= 1 - yearlyCAGRChange / 100;
+          price = priceEnd;
         }
         return out;
       }
 
-      /* ----- UPDATED TABLE RENDERING ----- */
-      function createRetirementTable(data) {
+      /* ===== 6. Table & chart rendering ===== */
+      function createRetirementTable(arr) {
         const div = document.getElementById("retirementSummary");
-
-        const runOut = data.find((d) => d.endingPortfolio <= 0);
-        if (runOut) {
-          const warn = document.createElement("p");
-          warn.className = "warning";
-          warn.textContent =
-            "Warning: portfolio projected to run out after Year " +
-            runOut.year +
-            ".";
-          div.appendChild(warn);
+        const warn = arr.find((d) => d.endingPortfolio <= 0);
+        if (warn) {
+          const p = document.createElement("p");
+          p.className = "warning";
+          p.textContent =
+            "Warning: portfolio runs out after Year " + warn.year + ".";
+          div.appendChild(p);
         }
+        const h = document.createElement("h2");
+        h.textContent = "Retirement Projection";
+        div.appendChild(h);
 
-        const h2 = document.createElement("h2");
-        h2.textContent = "Retirement Projection";
-        div.appendChild(h2);
-
-        const table = document.createElement("table");
-        table.classList.add("retirement-table");
-
-        const thead = document.createElement("thead");
-        const hdr = document.createElement("tr");
-        [
+        const tbl = document.createElement("table");
+        tbl.className = "retirement-table";
+        const headers = [
           "Year",
           "Bitcoin Price (" + currentCurrency + ") (Mkcap)",
           "Starting Portfolio (" + currentCurrency + ")",
@@ -910,64 +505,55 @@
           "Annual Growth (" + currentCurrency + ")",
           "Withdrawal/Growth (%)",
           "Ending Portfolio (" + currentCurrency + ")",
-          "Remaining Bitcoin (BTC)",            /* NEW COLUMN */
-        ].forEach((t) => {
+          "Remaining Bitcoin (BTC)",
+        ];
+        const thead = document.createElement("thead"),
+          hr = document.createElement("tr");
+        headers.forEach((t) => {
           const th = document.createElement("th");
           th.textContent = t;
-          hdr.appendChild(th);
+          hr.appendChild(th);
         });
-        thead.appendChild(hdr);
-        table.appendChild(thead);
+        thead.appendChild(hr);
+        tbl.appendChild(thead);
 
         const tbody = document.createElement("tbody");
-        data.forEach((d) => {
-          const tr = document.createElement("tr");
-          const put = (txt) => {
-            const td = document.createElement("td");
-            td.textContent = txt;
-            tr.appendChild(td);
-          };
-
-          put(d.year);
-
-          const priceUsd = convertToUsd(d.bitcoinPrice, currentCurrency);
-          const mcapT = Math.floor((priceUsd * 21_000_000) / 1e12);
-          put(formatCurrency(d.bitcoinPrice) + " (" + mcapT + " T USD)");
-
-          put(formatCurrency(d.startingPortfolio));
-          put(d.currentCAGR.toFixed(0));
-          put(formatCurrency(d.monthlyPension));
-          put(formatCurrency(d.totalWithdrawal));
-          put(formatCurrency(d.annualGrowth));
-
-          const ratio =
-            d.annualGrowth !== 0
-              ? ((d.totalWithdrawal / d.annualGrowth) * 100).toFixed(1) + "%"
-              : "-";
-          put(ratio);
-
+        arr.forEach((d) => {
+          const r = document.createElement("tr"),
+            cell = (v) => {
+              const td = document.createElement("td");
+              td.textContent = v;
+              r.appendChild(td);
+            };
+          cell(d.year);
+          const mcap = Math.floor(
+            (convertToUsd(d.bitcoinPrice, currentCurrency) * 21e6) / 1e12
+          );
+          cell(formatCurrency(d.bitcoinPrice) + " (" + mcap + " T USD)");
+          cell(formatCurrency(d.startingPortfolio));
+          cell(d.currentCAGR.toFixed(0));
+          cell(formatCurrency(d.monthlyPension));
+          cell(formatCurrency(d.totalWithdrawal));
+          cell(formatCurrency(d.annualGrowth));
+          cell(((d.totalWithdrawal / d.annualGrowth) * 100).toFixed(1) + "%");
           const endTd = document.createElement("td");
           endTd.textContent = formatCurrency(d.endingPortfolio);
           if (d.endingPortfolio < 0) {
             endTd.style.color = "red";
             endTd.style.fontWeight = "bold";
           }
-          tr.appendChild(endTd);
-
-          /* Remaining BTC column */
-          const btcTd = document.createElement("td");
-          btcTd.textContent = d.remainingBTC.toFixed(8);
-          tr.appendChild(btcTd);
-
-          tbody.appendChild(tr);
+          r.appendChild(endTd);
+          cell(d.remainingBTC.toFixed(8));
+          tbody.appendChild(r);
         });
-        table.appendChild(tbody);
-        div.appendChild(table);
+        tbl.appendChild(tbody);
+        div.appendChild(tbl);
       }
 
-      function createRetirementChart(data) {
-        const labels = data.map((d) => "Year " + d.year);
-        const vals = data.map((d) => d.endingPortfolio);
+      function createRetirementCharts(arr) {
+        const labels = arr.map((d) => "Year " + d.year),
+          port = arr.map((d) => d.endingPortfolio),
+          btc = arr.map((d) => d.remainingBTC);
 
         new Chart(document.getElementById("retirementChart"), {
           type: "line",
@@ -976,7 +562,7 @@
             datasets: [
               {
                 label: "Ending Portfolio (" + currentCurrency + ")",
-                data: vals,
+                data: port,
                 backgroundColor: "rgba(75,192,192,0.2)",
                 borderColor: "rgba(75,192,192,1)",
                 borderWidth: 2,
@@ -992,7 +578,6 @@
                 ticks: {
                   callback: (v) =>
                     v.toLocaleString(getLocaleForCurrency(currentCurrency), {
-                      minimumFractionDigits: 0,
                       maximumFractionDigits: 0,
                     }) +
                     " " +
@@ -1000,25 +585,163 @@
                 },
               },
             },
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: (ctx) =>
-                    ctx.parsed.y.toLocaleString(
-                      getLocaleForCurrency(currentCurrency),
-                      {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      }
-                    ) +
-                    " " +
-                    currentCurrency,
-                },
-              },
-            },
           },
+        });
+
+        new Chart(document.getElementById("btcChart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Remaining Bitcoin (BTC)",
+                data: btc,
+                backgroundColor: "rgba(255,159,64,0.2)",
+                borderColor: "rgba(255,159,64,1)",
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+              },
+            ],
+          },
+          options: { scales: { y: { beginAtZero: true } } },
         });
       }
     </script>
+  </head>
+  <body>
+    <h1>Bitcoin Retirement Calculator</h1>
+    <div id="explanation">
+      This app projects the growth of your Bitcoin holdings and simulates
+      retirement withdrawals – dynamically converting between
+      <span class="currency-label">USD</span>, EUR and PLN using live FX rates.
+    </div>
+
+    <!-- ===== Currency selector ===== -->
+    <div>
+      <label for="currencySelect">Select Currency:</label>
+      <select id="currencySelect">
+        <option value="USD" selected>USD</option>
+        <option value="EUR">EUR</option>
+        <option value="PLN">PLN</option>
+      </select>
+      <button type="button" id="updatePriceButton" class="update-button">
+        Update Price
+      </button>
+      <span id="fxStamp"></span>
+    </div>
+
+    <!-- ===== Input + summary ===== -->
+    <div class="input-summary-container">
+      <div id="inputArea">
+        <div>
+          <label for="currentPrice"
+            >Current Bitcoin Price (<span class="currency-label">USD</span
+            >):</label
+          ><input
+            id="currentPrice"
+            class="usd-input"
+            type="number"
+            step="any"
+            min="1"
+          />
+        </div>
+        <div>
+          <label for="expectedCAGR"
+            >Expected Future CAGR (%)
+            <span class="hint">(hist 5‑yr 56%, 10‑yr 82%)</span></label
+          ><input id="expectedCAGR" type="number" step="any" value="35" />
+        </div>
+        <div>
+          <label for="yearlyCAGRChange">Yearly CAGR Change (%)</label
+          ><input id="yearlyCAGRChange" type="number" step="any" value="5" />
+        </div>
+        <div>
+          <label for="initialAllocation"
+            >Initial Allocation (<span class="currency-label">USD</span
+            >):</label
+          ><input
+            id="initialAllocation"
+            class="usd-input"
+            type="number"
+            step="any"
+            value="10000"
+          />
+        </div>
+        <div>
+          <label for="monthlyPurchase"
+            >Monthly Purchase (<span class="currency-label">USD</span>):</label
+          ><input
+            id="monthlyPurchase"
+            class="usd-input"
+            type="number"
+            step="any"
+            value="1000"
+          />
+        </div>
+        <div>
+          <label for="monthlyPurchaseChange"
+            >Yearly Change in Monthly Purchase (%)</label
+          ><input
+            id="monthlyPurchaseChange"
+            type="number"
+            step="any"
+            value="0"
+          />
+        </div>
+        <div>
+          <label for="years">Number of Years to Invest:</label
+          ><input id="years" type="number" step="1" value="5" />
+        </div>
+
+        <h3>Retirement Assumptions</h3>
+        <div>
+          <label for="desiredPension"
+            >Desired Monthly Pension (<span class="currency-label">USD</span
+            >):</label
+          ><input
+            id="desiredPension"
+            class="usd-input"
+            type="number"
+            step="any"
+            value="2000"
+          />
+        </div>
+        <div>
+          <label for="pensionChange">Yearly Change in Pension (%)</label
+          ><input id="pensionChange" type="number" step="any" value="2" />
+        </div>
+        <div>
+          <label for="retirementYears">Number of Retirement Years:</label
+          ><input id="retirementYears" type="number" step="1" value="15" />
+        </div>
+
+        <button onclick="calculate()">Calculate</button>
+      </div>
+      <div id="summary"></div>
+    </div>
+
+    <!-- ===== Yearly breakdown table ===== -->
+    <div id="result">
+      <h2>Yearly Investment Breakdown</h2>
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>
+              Bitcoin Price (<span class="currency-label">USD</span>) (Mkcap)
+            </th>
+            <th>Bitcoin Purchased</th>
+            <th>Value (<span class="currency-label">USD</span>)</th>
+            <th>Current CAGR (%)</th>
+            <th>Monthly Purchase (<span class="currency-label">USD</span>)</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ===== Retirement projection ===== -->
+    <div id="retirementSummary"></div>
   </body>
 </html>
