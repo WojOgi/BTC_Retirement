@@ -829,6 +829,7 @@
         sumDiv.appendChild(tbl);
       }
 
+      /* ----- UPDATED FUNCTION ----- */
       function simulateRetirement(
         startPortfolio,
         initialMonthly,
@@ -846,12 +847,15 @@
 
         for (let yr = 1; yr <= retirementYears; yr++) {
           const startPort = port;
+          const btcPriceEnd = btcPrice * (1 + thisCAGR / 100);
           const mRate = Math.pow(1 + thisCAGR / 100, 1 / 12) - 1;
 
           for (let m = 0; m < 12; m++) port = port * (1 + mRate) - monthly;
 
           const withdrawal = monthly * 12;
           const endPort = port;
+          const remainingBTC = endPort / btcPriceEnd;
+
           out.push({
             year: yr,
             bitcoinPrice: btcPrice,
@@ -861,15 +865,18 @@
             totalWithdrawal: withdrawal,
             annualGrowth: endPort - startPort + withdrawal,
             endingPortfolio: endPort,
+            remainingBTC: remainingBTC,
           });
 
+          /* update for next year */
           monthly *= 1 + pensionChange / 100;
           thisCAGR *= 1 - yearlyCAGRChange / 100;
-          btcPrice *= 1 + thisCAGR / 100;
+          btcPrice = btcPriceEnd; // next year's starting price
         }
         return out;
       }
 
+      /* ----- UPDATED TABLE RENDERING ----- */
       function createRetirementTable(data) {
         const div = document.getElementById("retirementSummary");
 
@@ -903,6 +910,7 @@
           "Annual Growth (" + currentCurrency + ")",
           "Withdrawal/Growth (%)",
           "Ending Portfolio (" + currentCurrency + ")",
+          "Remaining Bitcoin (BTC)",            /* NEW COLUMN */
         ].forEach((t) => {
           const th = document.createElement("th");
           th.textContent = t;
@@ -945,6 +953,11 @@
             endTd.style.fontWeight = "bold";
           }
           tr.appendChild(endTd);
+
+          /* Remaining BTC column */
+          const btcTd = document.createElement("td");
+          btcTd.textContent = d.remainingBTC.toFixed(8);
+          tr.appendChild(btcTd);
 
           tbody.appendChild(tr);
         });
